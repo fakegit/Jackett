@@ -1,16 +1,15 @@
 ---
 id: tokyotosho
 name: Tokyo Toshokan
-description: "A BitTorrent Library for Japanese Media"
+description: "Tokyo Toshokan is a Public BitTorrent Library for JAPANESE Media"
 language: en-US
 type: public
 encoding: UTF-8
 links:
   - https://www.tokyotosho.info/
-  - https://tokyotosho.nocensor.biz/
+  - https://www.tokyotosho.se/
+  - https://tokyo-tosho.net/
 legacylinks:
-  - https://tokyotosho.black-mirror.xyz/
-  - https://tokyotosho.unblocked.casa/
   - https://tokyotosho.proxyportal.fun/
   - https://tokyotosho.uk-unblock.xyz/
   - https://tokyotosho.ind-unblock.xyz/
@@ -19,8 +18,8 @@ legacylinks:
   - https://tokyotosho.uk-unblock.pro/
   - https://tokyotosho.unblocked.rest/
   - https://tokyotosho.unblocked.monster/
-  - https://tokyotosho.nocensor.space/
-  - https://tokyotosho.nocensor.work/
+  - https://tokyotosho.mrunblock.bond/
+  - https://tokyotosho.nocensor.cloud/
 
 settings:
   - name: cat
@@ -64,6 +63,7 @@ caps:
   modes:
     search: [q]
     tv-search: [q, season, ep]
+    music-search: [q]
     book-search: [q]
 
 search:
@@ -115,7 +115,7 @@ search:
         - name: replace
           args: ["UTC", "+00:00"]
         - name: dateparse
-          args: "2006-01-02 15:04 -07:00"
+          args: "yyyy-MM-dd HH:mm zzz"
     seeders:
       selector: td.stats > span:nth-child(1)
     leechers:

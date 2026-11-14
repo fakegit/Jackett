@@ -1,10 +1,10 @@
 ---
 id: sktorrent
-name: SkTorrent
-description: "SkTorrent is a CZECH/SLOVAK Semi-Private Torrent Tracker for MOVIES / TV / GENERAL"
+name: Sk-CzTorrent
+description: "Sk-CzTorrent is a CZECH/SLOVAK Semi-Private Torrent Tracker for MOVIES / TV / GENERAL"
 language: cs-CZ
 type: semi-private
-encoding: windows-1250
+encoding: UTF-8
 links:
   - https://sktorrent.eu/
 legacylinks:
@@ -16,8 +16,8 @@ caps:
     - {id: 9, cat: XXX, desc: "xXx"}
     - {id: 23, cat: Books, desc: "Knihy a Časopisy"}
     - {id: 25, cat: Other, desc: "Ostatní"}
-    - {id: 5, cat: Movies, desc: "Filmy Kreslené"}
     - {id: 1, cat: Movies, desc: "Filmy CZ/SK dabing"}
+    - {id: 5, cat: Movies, desc: "Filmy Kreslené"}
     - {id: 14, cat: Movies/Other, desc: "Filmy Kamera"}
     - {id: 15, cat: Movies, desc: "Filmy s titulkama"}
     - {id: 20, cat: Movies/DVD, desc: "Filmy DVD"}
@@ -31,6 +31,8 @@ caps:
     - {id: 30, cat: PC/Games, desc: "Hry na Konzole"}
     - {id: 37, cat: PC/Games, desc: "Hry na Linux"}
     - {id: 59, cat: PC/Games, desc: "Hry na Mac"}
+    - {id: 60, cat: PC/Games, desc: "xXx hry (18+)"}
+    - {id: 63, cat: PC/Games, desc: "VR Hry"}
     - {id: 16, cat: TV, desc: "TV Seriál"}
     - {id: 17, cat: TV/Documentary, desc: "TV Dokument"}
     - {id: 42, cat: TV, desc: "TV Pořad"}
@@ -46,10 +48,18 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q, season, ep]
-    movie-search: [q]
+    tv-search: [q, season, ep, genre]
+    movie-search: [q, genre]
     music-search: [q]
     book-search: [q]
+
+settings:
+  - name: username
+    type: text
+    label: Username
+  - name: password
+    type: password
+    label: Password
 
 login:
   path: torrent/login.php
@@ -64,42 +74,37 @@ login:
     path: torrent/index.php
     selector: a[href^="usercp.php"]
 
-download:
-  selectors:
-    - selector: a[href^="download.php?id="]
-      attribute: href
-
 search:
   paths:
-    - path: torrent/torrents_v2.php
+    - path: torrent/torrents.php
   inputs:
     search: "{{ .Keywords }}"
     category: "{{ range .Categories }}{{.}};{{end}}"
     # 0 all, 1 activeonly, 2 deadonly
     active: 0
+    zaner: "{{ .Query.Genre }}"
   keywordsfilters:
     - name: diacritics
       args: replace
 
   rows:
-    selector: table.lista > tbody > tr > td > table.lista > tbody > tr > td:has(a[href^="details.php?name="])
+    selector: table.lista > tbody > tr > td > table.lista > tbody > tr:has(a[href^="download.php?id="])
 
   fields:
     category:
-      selector: a[href^="torrents_v2.php?category="]
+      selector: a[href^="torrents.php?category="]
       attribute: href
       filters:
         - name: querystring
           args: category
     title:
-      selector: a[href^="details.php?name="]
+      selector: a[href^="details.php?id="]
+      attribute: title
       filters:
         - name: re_replace
           args: ["^VA\\s*\\|", "VA -"]
         - name: re_replace
           args: ["^.*? \\/\\s*|^.*? \\|\\s*", ""]
-        - name: diacritics
-          args: replace
         - name: re_replace
           args: ["\\|\\s*\\d+\\% CSFD\\.cz\\/|\\s*=*\\s*CSFD\\s*\\d+\\%|\\s*CSFD\\s*=*\\s*\\d+\\%|\\s*CSFD", ""]
         - name: re_replace
@@ -179,45 +184,52 @@ search:
         - name: re_replace
           args: ["(?i)komplet (\\d{1})\\-(\\d{1})", "komplet S0$1-S0$2"]
     details:
-      selector: a[href^="details.php?name="]
+      selector: a[href^="details.php?id="]
       attribute: href
-    poster_default:
-      selector: img[class="lozad"]
-      attribute: data-src
-      optional: true
-    poster_optional:
-      selector: img[src="//cdn.sktorrent.eu/obrazky/xXx.jpg"]
-      attribute: src
-      optional: true
-    poster:
-      text: "{{ if .Result.poster_optional }}{{ .Result.poster_optional }}{{ else }}{{ .Result.poster_default }}{{ end }}"
     download:
-      selector: a[href^="details.php?name="]
+      selector: a[href^="download.php?id="]
       attribute: href
+    poster:
+      selector: a[href^="#"]
+      attribute: onmouseover
+      filters:
+        - name: regexp
+          args: "src=(.+?) width"
+        - name: prepend
+          args: "https:"
     size:
-      selector: div > div
+      selector: td:nth-child(3)
       filters:
         - name: regexp
           args: "Velkost (.+?) \\|"
     date:
-      selector: div > div
+      selector: td:nth-child(3)
       filters:
         - name: regexp
-          args: "Pridany (\\d{2}/\\d{2}/\\d{4})"
+          args: "Pridany (\\d{2}/\\d{2}/\\d{4} o \\d{2}:\\d{2})"
+        - name: replace
+          args: [" o ", " "]
         - name: append
-          args: " +00:00" # auto adjusted by site account profile
+          args: " +01:00" # CET
         - name: dateparse
-          args: "02/01/2006 -07:00"
+          args: "dd/MM/yyyy HH:mm zzz"
     seeders:
-      selector: div > div
-      filters:
-        - name: regexp
-          args: "Odosielaju : (\\d+)"
+      selector: td:nth-child(5)
     leechers:
-      selector: div > div
+      selector: td:nth-child(6)
+    grabs:
+      selector: td:nth-child(7)
+    genre:
+      selector: td:nth-child(3)
       filters:
-        - name: regexp
-          args: "Stahuju : (\\d+)"
+        - name: replace
+          args: ["\n", ""]
+        - name: replace
+          args: ["\x09", " "]
+        - name: validate
+          args: "Akcni, Animovany, Dobrodruzny, Dokumentarny, Drama, Eroticky, Experimentalni, Fantasy, Historicky, Horor, Hudebni, Katastroficky, Komedie, Kratkometrazni, Krimi, Loutkovy, Muzikal, Mysteriozni, Pohadka, Povidkovy, Psychologicky, Publicisticky, Reality-TV, Road-Movie, Rodinny, Romanticky, Sci-Fi, Soutezni, Sportovni, Talk-show, Telenovela, Thriller, Valecny, Western, Zivotopisny"
+    description:
+      text: "{{ .Result.genre }}"
     downloadvolumefactor:
       text: 1
     uploadvolumefactor:

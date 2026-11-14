@@ -1,7 +1,7 @@
 ---
 id: Bittorrentfiles
 name: Bittorrentfiles
-description: "Bittorrentfiles is a Private GERMAN tracker"
+description: "Bittorrentfiles is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL"
 language: de-DE
 type: private
 encoding: UTF-8
@@ -84,7 +84,7 @@ caps:
     - {id: 59, cat: XXX/Pack, desc: "XXX Pack"}
     - {id: 27, cat: XXX/SD, desc: "XXX SD"}
     - {id: 76, cat: XXX, desc: "XXX Andere"}
-
+    - {id: 100, cat: XXX/UHD, desc: "XXX UHD"}
 
   modes:
     search: [q]
@@ -128,18 +128,23 @@ settings:
     type: info
     label: Results Per Page
     default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Inactive accounts of users, power users and mega users will be permanently deleted from the database after 125 days! Torrents in your share don't count as activity - only logging in again counts! You can extend this period to 250 days by setting your account to parking. You can find the option to do this under Edit Profile."
 
 login:
   path: signin.php
-  method: form
-  form: form
+  method: post
   inputs:
     user: "{{ .Config.user }}"
     pass: "{{ .Config.pass }}"
+    returnto: "%2Fbrowse.php"
   error:
     - selector: .error
   test:
-    path: browse.php
+    path: index.php
+    selector: a[href^="/logout.php?c="]
 
 search:
   path: browse.php
@@ -157,48 +162,44 @@ search:
     selector: table.tableinborder > tbody > tr:has(a[href^="/download.php"])
 
   fields:
-    title:
-      selector: a[href^="details.php"]
-      attribute: title
     category:
       selector: a[href^="/browse.php?cat="]
       attribute: href
       filters:
         - name: querystring
           args: cat
+    title:
+      selector: a[href^="details.php"]
+      attribute: title
     details:
       selector: a[href^="details.php"]
       attribute: href
     download:
       selector: a[href^="/download.php"]
       attribute: href
-    grabs_optional:
+    grabs:
       selector: a[title="Snatcher"]
       optional: true
-    grabs:
-      text: "{{ if .Result.grabs_optional }}{{ .Result.grabs_optional }}{{ else }}0{{ end }}"
-    files_optional:
+      default: 0
+    files:
       selector: a[title="Files"]
       optional: true
-    files:
-      text: "{{ if .Result.files_optional }}{{ .Result.files_optional }}{{ else }}0{{ end }}"
+      default: 0
     size:
       selector: td:nth-child(6)
-    seeders_optional:
+    seeders:
       selector: a[title="Seeder"]
       optional: true
-    seeders:
-      text: "{{ if .Result.seeders_optional }}{{ .Result.seeders_optional }}{{ else }}0{{ end }}"
-    leechers_optional:
+      default: 0
+    leechers:
       selector: a[title="Leecher"]
       optional: true
-    leechers:
-      text: "{{ if .Result.leechers_optional }}{{ .Result.leechers_optional }}{{ else }}0{{ end }}"
+      default: 0
       # 2 flavours of dates
     date_day:
       # Heute 13:30:04
       # Gestern 09:10:10
-      selector: td:nth-child(10):contains("Heute"),  td:nth-child(10):contains("Gestern")
+      selector: td:nth-child(10):contains("Heute"), td:nth-child(10):contains("Gestern")
       optional: true
       filters:
         - name: split
@@ -208,7 +209,7 @@ search:
         - name: replace
           args: ["Gestern", "Yesterday"]
         - name: append
-          args: " +01:00" # CET
+          args: "+01:00" # CET
     date_year:
       # 30.02.2018 23:12:50
       selector: td:nth-child(10):contains("."):contains(":")
@@ -217,9 +218,9 @@ search:
         - name: split
           args: ["b", 0]
         - name: append
-          args: " +01:00" # CET
+          args: "+01:00" # CET
         - name: dateparse
-          args: "02.01.2006 15:04:05 -07:00"
+          args: "dd.MM.yyyy HH:mm:ss zzz"
     date:
       text: "{{ if or .Result.date_year .Result.date_day }}{{ or .Result.date_year .Result.date_day }}{{ else }}now{{ end }}"
     downloadvolumefactor:

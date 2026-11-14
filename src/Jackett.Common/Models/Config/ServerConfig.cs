@@ -15,11 +15,13 @@ namespace Jackett.Common.Models.Config
             observers = new List<IObserver<ServerConfig>>();
             // Default values
             Port = 9117;
+            LocalBindAddress = "127.0.0.1";
             AllowExternal = Environment.OSVersion.Platform == PlatformID.Unix;
             CacheEnabled = true;
             // Sonarr 15min, Radarr 60min, LazyLibrarian 20min, Readarr 15min, Lidarr = 15min
             CacheTtl = 2100; // 35 minutes is a reasonable value for all of them and to avoid race conditions
             CacheMaxResultsPerIndexer = 1000;
+            FlareSolverrMaxTimeout = 55000;
             RuntimeSettings = runtimeSettings;
         }
 
@@ -31,7 +33,9 @@ namespace Jackett.Common.Models.Config
         }
 
         public int Port { get; set; }
+        public string LocalBindAddress { get; set; }
         public bool AllowExternal { get; set; }
+        public bool AllowCORS { get; set; }
         public string APIKey { get; set; }
         public string AdminPassword { get; set; }
         public string InstanceId { get; set; }
@@ -39,10 +43,12 @@ namespace Jackett.Common.Models.Config
         public bool UpdateDisabled { get; set; }
         public bool UpdatePrerelease { get; set; }
         public string BasePathOverride { get; set; }
+        public string BaseUrlOverride { get; set; }
         public bool CacheEnabled { get; set; }
         public long CacheTtl { get; set; }
         public long CacheMaxResultsPerIndexer { get; set; }
         public string FlareSolverrUrl { get; set; }
+        public int FlareSolverrMaxTimeout { get; set; }
         public string OmdbApiKey { get; set; }
         public string OmdbApiUrl { get; set; }
 
@@ -88,7 +94,7 @@ namespace Jackett.Common.Models.Config
                 url = $"{authString}@{url}";
 
             // add protocol
-            if (ProxyType == ProxyType.Socks4 || ProxyType == ProxyType.Socks5)
+            if (ProxyType == ProxyType.Socks4 || ProxyType == ProxyType.Socks5 || ProxyType == ProxyType.Http)
             {
                 var protocol = (Enum.GetName(typeof(ProxyType), ProxyType) ?? "").ToLower();
                 if (!string.IsNullOrEmpty(protocol))
@@ -110,7 +116,7 @@ namespace Jackett.Common.Models.Config
             else
             {
                 return new string[] {
-                    "http://127.0.0.1:" + Port + "/"
+                    $"http://{LocalBindAddress}:{Port}/"
                 };
             }
         }

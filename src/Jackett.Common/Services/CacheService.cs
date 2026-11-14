@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+using Jackett.Common.Extensions;
 using Jackett.Common.Indexers;
 using Jackett.Common.Models;
 using Jackett.Common.Models.Config;
 using Jackett.Common.Services.Interfaces;
-using Jackett.Common.Utils;
+using Newtonsoft.Json;
 using NLog;
 
 namespace Jackett.Common.Services
@@ -35,8 +34,7 @@ namespace Jackett.Common.Services
     {
         private readonly Logger _logger;
         private readonly ServerConfig _serverConfig;
-        private readonly SHA256Managed _sha256 = new SHA256Managed();
-        private readonly Dictionary<string, TrackerCache> _cache = new Dictionary<string, TrackerCache>();
+        private readonly Dictionary<string, TrackerCache> _cache = new();
 
         public CacheService(Logger logger, ServerConfig serverConfig)
         {
@@ -60,14 +58,15 @@ namespace Jackett.Common.Services
                     _cache.Add(indexer.Id, new TrackerCache
                     {
                         TrackerId = indexer.Id,
-                        TrackerName = indexer.DisplayName
+                        TrackerName = indexer.Name,
+                        TrackerType = indexer.Type
                     });
                 }
 
                 var trackerCacheQuery = new TrackerCacheQuery
                 {
                     Created = DateTime.Now,
-                    Results = releases
+                    Results = releases.Select(r => (ReleaseInfo)r.Clone()).ToList()
                 };
 
                 var trackerCache = _cache[indexer.Id];
@@ -112,35 +111,32 @@ namespace Jackett.Common.Services
             }
         }
 
-        public List<TrackerCacheResult> GetCachedResults()
+        public IReadOnlyList<TrackerCacheResult> GetCachedResults()
         {
             lock (_cache)
             {
                 if (!IsCacheEnabled())
-                    return new List<TrackerCacheResult>();
+                    return Array.Empty<TrackerCacheResult>();
 
                 PruneCacheByTtl(); // remove expired results
 
-                var results = new List<TrackerCacheResult>();
-                foreach (var trackerCache in _cache.Values)
-                {
-                    var trackerResults = new List<TrackerCacheResult>();
-                    foreach (var query in trackerCache.Queries.Values.OrderByDescending(q => q.Created)) // newest first
-                    {
-                        foreach (var release in query.Results)
-                        {
-                            var item = MapperUtil.Mapper.Map<TrackerCacheResult>(release);
-                            item.FirstSeen = query.Created;
-                            item.Tracker = trackerCache.TrackerName;
-                            item.TrackerId = trackerCache.TrackerId;
-                            item.Peers -= item.Seeders; // Use peers as leechers
-                            trackerResults.Add(item);
-                        }
-                    }
-                    trackerResults = trackerResults.GroupBy(r => r.Guid).Select(y => y.First()).Take(300).ToList();
-                    results.AddRange(trackerResults);
-                }
-                var result = results.OrderByDescending(i => i.PublishDate).Take(3000).ToList();
+                var result = _cache.Values.SelectMany(
+                                       trackerCache => trackerCache.Queries.Values
+                                                                   .OrderByDescending(q => q.Created)
+                                                                   .SelectMany(
+                                                                       query => query.Results.Select(release =>
+                                                                           new TrackerCacheResult(release)
+                                                                           {
+                                                                               FirstSeen = query.Created,
+                                                                               Tracker = trackerCache.TrackerName,
+                                                                               TrackerId = trackerCache.TrackerId,
+                                                                               TrackerType = trackerCache.TrackerType
+                                                                           }))
+                                                                   .GroupBy(r => r.Guid)
+                                                                   .Select(y => y.First())
+                                                                   .Take(300))
+                                   .OrderByDescending(i => i.PublishDate)
+                                   .Take(3000).ToList();
 
                 _logger.Debug($"CACHE GetCachedResults / Results: {result.Count} (cache may contain more results)");
                 PrintCacheStatus();
@@ -237,23 +233,20 @@ namespace Jackett.Common.Services
             }
         }
 
-        private string GetQueryHash(TorznabQuery query)
+        private static string GetQueryHash(TorznabQuery query)
         {
             var json = GetSerializedQuery(query);
-            // Compute the hash
-            return BitConverter.ToString(_sha256.ComputeHash(Encoding.UTF8.GetBytes(json)));
+
+            return json.SHA256Hash();
         }
 
         private static string GetSerializedQuery(TorznabQuery query)
         {
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(query);
+            var json = JsonConvert.SerializeObject(query);
 
             // Changes in the query to improve cache hits
             // Both request must return the same results, if not we are breaking Jackett search
             json = json.Replace("\"SearchTerm\":null", "\"SearchTerm\":\"\"");
-
-            // The Cache parameter's value should not affect caching itself
-            json = json.Replace("\"Cache\":false", "\"Cache\":true");
 
             return json;
         }

@@ -1,23 +1,28 @@
 ---
 id: catorrent
 name: Catorrent
-description: "Catorrent is a RUSSIAN Semi-Private Torrent Tracker for GAMES"
+description: "Catorrent is a RUSSIAN Public Torrent Tracker for GAMES"
 language: ru-RU
-type: semi-private
+type: public
 encoding: UTF-8
 links:
+  - https://catorrent.net/
+legacylinks:
   - https://catorrent.org/
 
 caps:
   categorymappings:
+    - {id: DC, cat: Console/Other, desc: "DC"}
     - {id: PC, cat: PC/Games, desc: "PC"}
     - {id: PS1, cat: Console/Other, desc: "Playstation 1"}
     - {id: PS2, cat: Console/Other, desc: "Playstation 2"}
     - {id: PS3, cat: Console/PS3, desc: "Playstation 3"}
     - {id: PS4, cat: Console/PS4, desc: "Playstation 4"}
+    - {id: PS5, cat: Console/Other, desc: "Playstation 5"}
     - {id: SWITCH, cat: Console/Other, desc: "Nintendo Switch"}
     - {id: PSP, cat: Console/PSP, desc: "Playstation (portable) PSP"}
     - {id: PSVITA, cat: Console/PS Vita, desc: "Playstation Vita"}
+    - {id: XBOX, cat: Console/XBox, desc: "Xbox"}
     - {id: XONE, cat: Console/XBox One, desc: "Xbox ONE"}
     - {id: X360, cat: Console/XBox 360, desc: "Xbox 360"}
     - {id: WIIU, cat: Console/WiiU, desc: "Nintendo WIIU"}
@@ -32,28 +37,7 @@ caps:
   modes:
     search: [q]
 
-settings:
-  - name: username
-    type: text
-    label: Username
-  - name: password
-    type: password
-    label: Password
-
-login:
-  path: index.php
-  method: form
-  form: form[action=""]
-  inputs:
-    login_name: "{{ .Config.username }}"
-    login_password: "{{ .Config.password }}"
-    login_not_save: ""
-    login: submit
-  error:
-    - selector: div.berrors
-  test:
-    path: /
-    selector: a[href$="/index.php?action=logout"]
+settings: []
 
 download:
   selectors:
@@ -71,12 +55,17 @@ search:
     result_from: 1
     story: "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}"
 
+  headers:
+    Referer: ["{{ .Config.sitelink }}"]
+
   rows:
     selector: div.short_game_search
 
   fields:
     category:
       selector: div.icon_default
+      optional: true
+      default: PS1
     title:
       selector: div.short_game_title
     details:
@@ -88,8 +77,10 @@ search:
     poster:
       selector: img
       attribute: src
-    description:
+    genre:
       selector: div.short_game_genre
+    description:
+      text: "{{ .Result.genre }}"
     date:
       text: now
     seeders:
@@ -102,4 +93,4 @@ search:
       text: 0
     uploadvolumefactor:
       text: 1
-# engine n/a
+# DataLife v25

@@ -1,7 +1,7 @@
 ---
 id: milkie
 name: Milkie
-description: "Milkie.cc (ME) is private torrent tracker for 0day / general"
+description: "Milkie.cc (ME) is Private Torrent Tracker for 0DAY / GENERAL"
 language: en-US
 type: private
 encoding: UTF-8
@@ -32,7 +32,7 @@ settings:
   - name: info_key
     type: info
     label: About your API key
-    default: "Find or Generate a new key <a href=\"https://milkie.cc/settings/security\" target =_blank>here</a>."
+    default: "Find or Generate a new key <a href=\"https://milkie.cc/settings/security\" target=\"_blank\">here</a>."
 
 search:
   headers:
@@ -54,20 +54,20 @@ search:
       selector: hits
 
   fields:
-    id:
+    _id:
       selector: id
     category:
       selector: category
     title:
       selector: releaseName
     details:
-      text: "{{ .Config.sitelink }}browse/{{ .Result.id }}"
-    apikey:
+      text: "/browse/{{ .Result._id }}"
+    _apikey:
       text: "{{ .Config.apikey }}"
       filters:
         - name: urlencode
     download:
-      text: "{{ .Config.sitelink }}api/v1/torrents/{{ .Result.id }}/torrent?key={{ .Result.apikey }}"
+      text: "/api/v1/torrents/{{ .Result._id }}/torrent?key={{ .Result._apikey }}"
     date:
       selector: createdAt
     size:

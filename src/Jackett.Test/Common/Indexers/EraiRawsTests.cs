@@ -1,8 +1,6 @@
-using System;
 using System.Collections;
-using Jackett.Common.Indexers;
+using Jackett.Common.Indexers.Definitions;
 using NUnit.Framework;
-using Assert = NUnit.Framework.Assert;
 
 namespace Jackett.Test.Common.Indexers
 {

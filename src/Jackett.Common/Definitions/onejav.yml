@@ -1,10 +1,11 @@
 ---
 id: onejav
 name: OneJAV
-description: "OneJAV is a Public tracker for Asian 3X (JAV)"
+description: "OneJAV is a Public tracker for ASIAN 3X (JAV)"
 language: en-US
 type: public
 encoding: UTF-8
+requestDelay: 2
 links:
   - https://onejav.com/
 
@@ -16,10 +17,8 @@ caps:
     search: [q]
 
 settings:
-  - name: flaresolverr-onejav
-    type: info
-    label: FlareSolverr
-    default: This site may use Cloudflare DDoS Protection, therefore Jackett requires <a href="https://github.com/Jackett/Jackett#configuring-flaresolverr" target="_blank">FlareSolver</a> to access it.<br><br>If you have issues downloading, perform a keyword search (e.g. <b>video</b>) so FlareSolverr can grab new cookies.
+  - name: info_flaresolverr
+    type: info_flaresolverr
 
 search:
   paths:
@@ -43,23 +42,23 @@ search:
     poster:
       selector: img
       attribute: src
-    actress:
+    _actress:
       selector: a[href^="/actress/"]
       optional: true
       filters:
         - name: prepend
           args: "Actress: "
-    tags:
+    _tags:
       selector: div.tags
       optional: true
       filters:
         - name: prepend
           args: "Tags: "
-    descr:
+    description_text:
       selector: p.level
       optional: true
     description:
-      text: "{{ .Result.descr }}</br>{{ .Result.actress }}</br>{{ .Result.tags }}"
+      text: "{{ .Result.description_text }}</br>{{ .Result._actress }}</br>{{ .Result._tags }}"
     date:
       selector: p.is-6 > a
       attribute: href
@@ -67,7 +66,7 @@ search:
         - name: append
           args: " -07:00" # PDT
         - name: dateparse
-          args: "/2006/01/02 -07:00"
+          args: "/yyyy/MM/dd zzz"
     size:
       selector: span.is-size-6
     seeders:

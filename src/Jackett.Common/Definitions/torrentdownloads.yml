@@ -5,47 +5,18 @@ description: "Torrent Downloads (TD) is a Public torrent site for all kinds of c
 language: en-US
 type: public
 encoding: UTF-8
-followredirect: true
 links:
-  - https://www.torrentdownloads.info/
   - https://www.torrentdownloads.pro/
-  - https://torrentdownloads.unblockit.tv/
-  - https://torrentdownloads.nocensor.biz/
+  - https://torrentdownloads.ninjaproxy1.com/
+  - https://torrentdownloads.proxyninja.org/
 legacylinks:
-  - https://torrentdownloads.unblockit.pro/
-  - https://torrentdownloads.unblockit.one/
-  - https://torrentdownloads.black-mirror.xyz/
-  - https://torrentdownloads.unblocked.casa/
-  - https://torrentdownloads.proxyportal.fun/
-  - https://torrentdownloads.uk-unblock.xyz/
-  - https://torrentdownloads.ind-unblock.xyz/
-  - https://torrentdownloads.unblockit.me/
-  - https://torrentdownloads.unblockit.pw/
-  - https://torrentdownloads.unblockit.id/
-  - https://torrentdownloads.unblockit.win/
-  - https://torrentdownloads.unblocked.bar/
-  - https://torrentdownloads.proxyportal.pw/
-  - https://torrentdownloads.uk-unblock.pro/
-  - https://torrentdownloads.unblockit.top/
-  - https://torrentdownloads.unblockit.lat/
-  - https://torrentdownloads.unblockit.app/
-  - https://torrentdownloads.unblocked.rest/
-  - https://torrentdownloads.unblockit.dev/
-  - https://torrentdownloads.unblockit.ltd/
-  - https://torrentdownloads.unblockit.link/
-  - https://torrentdownloads.unblockit.buzz/
-  - https://torrentdownloads.unblocked.monster/
-  - https://torrentdownloads.unblockit.club/
-  - https://torrentdownloads.unblockit.onl/
-  - https://torrentdownloads.unblockit.li/
-  - https://torrentdownloads.unblockit.uno/
   - https://www.torrentdownloads.me/
-  - https://torrentdownloads.unblockit.ch/
-  - https://torrentdownloads.nocensor.space/
-  - https://torrentdownloads.unblockit.ws/
-  - https://torrentdownloads.nocensor.work/
-  - https://torrentdownloads.unblockit.kim/
-  - https://torrentdownloads.unblockit.bz/
+  - https://www.torrentdownloads.info/
+  - https://torrentdownloads.mrunblock.bond/
+  - https://torrentdownloads.nocensor.cloud/
+  - https://torrentdownloads.unblockit.download/
+  - https://torrentdownloads.unblockninja.com/
+  - https://torrentdownloads.proxyninja.net/
 
 caps:
   categorymappings:
@@ -66,22 +37,23 @@ caps:
     movie-search: [q]
     music-search: [q]
     book-search: [q]
+  allowrawsearch: true
 
 settings:
-  - name: downloadlink
+  - name: primarydownloadlink
     type: select
-    label: Download link
+    label: Primary Download link
     default: "magnet:"
     options:
-      "http://itorrents.org/": "iTorrents.org"
-      "magnet:": "magnet"
-  - name: downloadlink2
+      "//itorrents.": iTorrents
+      "magnet:": magnet
+  - name: fallbackdownloadlink
     type: select
-    label: Download link (fallback)
-    default: "http://itorrents.org/"
+    label: Fallback Download link
+    default: "//itorrents."
     options:
-      "http://itorrents.org/": "iTorrents.org"
-      "magnet:": "magnet"
+      "//itorrents.": iTorrents
+      "magnet:": magnet
   - name: info_download
     type: info
     label: About the Download links
@@ -89,18 +61,24 @@ settings:
 
 download:
   selectors:
-    - selector: a[href^="{{ .Config.downloadlink }}"]
+    - selector: a[href*="{{ .Config.primarydownloadlink }}"]
       attribute: href
-    - selector: a[href^="{{ .Config.downloadlink2 }}"]
+    - selector: a[href*="{{ .Config.fallbackdownloadlink }}"]
       attribute: href
 
 search:
   paths:
-    - path: "{{ if .Keywords }}/search/{{ else }}/today/{{ end }}"
+    - path: search/
       followredirect: true
   inputs:
-    $raw: "{{ range .Categories }}s_cat={{.}}&{{end}}"
-    search: "{{ .Keywords }}"
+    # does not support multiple category searching, so defaulting to any.
+    s_cat: 0
+    search: "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}"
+
+  keywordsfilters:
+    - name: re_replace
+      args: ["\\W+", " "]
+    - name: trim
 
   rows:
     selector: div.inner_container > div:has(p:has(a[href^="/torrent/"])):not(:has(span.__cf_email__))

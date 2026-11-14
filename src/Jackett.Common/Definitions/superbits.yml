@@ -1,12 +1,13 @@
 ---
 id: superbits
 name: Superbits
-description: "Superbits is a SWEDISH Private Torrent Tracker for MOVIES / TV / GENERAL"
-language: sv-SW
+description: "SuperBits (SBS) is a SWEDISH Private Torrent Tracker for MOVIES / TV / GENERAL"
+language: sv-SE
 type: private
 encoding: UTF-8
 links:
   - https://superbits.org/
+  - https://superbits.cc/
 
 caps:
   categorymappings:
@@ -23,7 +24,7 @@ caps:
     - {id: 10, cat: Audio/Video, desc: Musikvideos}
     - {id: 11, cat: Books/Mags, desc: E-tidningar}
     - {id: 12, cat: Audio, desc: MP3}
-    - {id: 13, cat: Other, desc: Omslag}
+    - {id: 13, cat: Audio, desc: Pod}
     - {id: 14, cat: Other, desc: Övrigt}
     - {id: 15, cat: PC/Games, desc: PC-Spel}
     - {id: 16, cat: PC/0day, desc: Program}
@@ -50,13 +51,15 @@ settings:
   - name: cookie
     type: text
     label: Cookie
-  - name: info
-    type: info
-    label: How to get the Cookie
-    default: "<ol><li>Login to this tracker with your browser<li>Open the <b>DevTools</b> panel by pressing <b>F12</b><li>Select the <b>Network</b> tab<li>Click on the <b>Doc</b> button (Chrome Browser) or <b>HTML</b> button (FireFox)<li>Refresh the page by pressing <b>F5</b><li>Click on the first row entry<li>Select the <b>Headers</b> tab on the Right panel<li>Find <b>'cookie:'</b> in the <b>Request Headers</b> section<li><b>Select</b> and <b>Copy</b> the whole cookie string <i>(everything after 'cookie: ')</i> and <b>Paste</b> here.</ol>"
+  - name: info_cookie
+    type: info_cookie
   - name: freeleech
     type: checkbox
     label: Search freeleech only
+    default: false
+  - name: p2p_releases_only
+    type: checkbox
+    label: Search P2P releases only
     default: false
   - name: sort
     type: select
@@ -74,8 +77,13 @@ settings:
     options:
       desc: desc
       asc: asc
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "If you have not logged in, via web browser, for 3 months, the account will be suspended. You can park your account in Settings which means that it will not be deleted for inactivity for at least 1 year."
 
 login:
+  # switched from the form method to the cookie method due to #12468
   method: cookie
   inputs:
     cookie: "{{ .Config.cookie }}"
@@ -102,8 +110,9 @@ search:
     noaudio: false
     nosub: false
     order: "{{ .Config.type }}"
+    p2p: "{{ if .Config.p2p_releases_only }}true{{ else }}{{ end }}"
     page: search
-    searchText: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}"
+    searchText: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }} {{ else }}{{ end }}{{ .Keywords }}"
     section: all
     sort: "{{ .Config.sort }}"
     stereoscopic: false
@@ -119,25 +128,25 @@ search:
       selector: category
     title:
       selector: name
-    id:
+    _id:
       selector: id
     details:
-      text: "{{ .Config.sitelink }}torrent/{{ .Result.id }}/"
+      text: "/torrent/{{ .Result._id }}/"
     download:
-      text: "{{ .Config.sitelink }}api/v1/torrents/download/{{ .Result.id }}"
+      text: "/api/v1/torrents/download/{{ .Result._id }}"
     imdbid:
       selector: imdbid2
-    imdbidfull:
+    imdbid_full:
       optional: true
       selector: imdbid2
-    posternormal:
+    poster_normal:
       optional: true
       selector: customcover
-    posterimdb:
+    poster_imdb:
       optional: true
-      text: "{{ if .Result.imdbid }}{{ .Config.sitelink }}img/imdb/{{ .Result.imdbidfull }}.jpg{{ else }}{{ end }}"
+      text: "{{ if .Result.imdbid }}/img/imdb/{{ .Result.imdbid_full }}.jpg{{ else }}{{ end }}"
     poster:
-      text: "{{ if .Result.posterimdb }}{{ .Result.posterimdb }}{{ else }}{{ .Result.posternormal }}{{ end }}"
+      text: "{{ if .Result.poster_imdb }}{{ .Result.poster_imdb }}{{ else }}{{ .Result.poster_normal }}{{ end }}"
     date:
       # 2021-10-26 13:50:07
       selector: added
@@ -145,16 +154,15 @@ search:
         - name: append
           args: " +01:00" # CET
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     size:
       selector: size
     files:
       selector: numfiles
-    grabs_optional:
-      optional: true
-      selector: timesCompleted
     grabs:
-      text: "{{ if .Result.grabs_optional }}{{ .Result.grabs_optional }}{{ else }}0{{ end }}"
+      selector: timesCompleted
+      optional: true
+      default: 0
     seeders:
       selector: seeders
     leechers:
@@ -172,96 +180,98 @@ search:
     minimumseedtime:
       # 2 days (as seconds = 2 x 24 x 60 x 60)
       text: 172800
-    titledesc:
+    title_desc:
       optional: true
       selector: title
-    yeardesc:
+    year:
       optional: true
       selector: year
-    genresdesc:
-      optional: true
+    genre:
       selector: genres
-    taglinedesc:
+    _tagline_desc:
       optional: true
       selector: tagline
-    castdesc:
+    _cast_desc:
       optional: true
       selector: cast
-    ratingdesc:
+    _rating_desc:
       optional: true
       selector: rating
-    plotdesc:
+      filters:
+        - name: re_replace
+          args: ["^0$", ""]
+    _plot_desc:
       optional: true
       selector: plot
-    sectiondesc:
+    _section_desc:
       optional: true
       selector: section
-    predatedesc:
+    _predate_desc:
       selector: preDate
       filters:
         - name: re_replace
           args: ["1970-01-01 01:00:00", ""]
-    p2ptag:
+    _p2ptag:
       selector: p2p
       case:
         0: ""
         1: P2P
-    packtag:
+    _packtag:
       selector: pack
       case:
         0: ""
         1: Pack
-    reqidtag:
+    _reqidtag:
       selector: reqid
       case:
         0: ""
         "*": Request
-    sweaudiotag:
+    _sweaudiotag:
       selector: sweaudio
       case:
         0: ""
         "*": "Swedish audio"
-    swesubtag:
+    _swesubtag:
       selector: swesub
       case:
         0: ""
         "*": "Swedish subtitles"
-    dkaudiotag:
+    _dkaudiotag:
       selector: dkaudio
       case:
         0: ""
         "*": "Danish audio"
-    dksubtag:
+    _dksubtag:
       selector: dksub
       case:
         0: ""
         "*": "Danish subtitles"
-    enaudiotag:
+    _enaudiotag:
       selector: enaudio
       case:
         0: ""
         "*": "English audio"
-    ensubtag:
+    _ensubtag:
       selector: ensub
       case:
         0: ""
         "*": "English subtitles"
-    noaudiotag:
+    _noaudiotag:
       selector: noaudio
       case:
         0: ""
         "*": "Norwegian audio"
-    nosubtag:
+    _nosubtag:
       selector: nosub
       case:
         0: ""
         "*": "Norwegian subtitles"
-    tagdesc:
+    _tag_desc:
       optional: true
-      text: "{{ if .Result.p2ptag }}{{ .Result.p2ptag }}, {{ else }}{{ end }}{{ if .Result.packtag }}{{ .Result.packtag }}, {{ else }}{{ end }}{{ if .Result.reqidtag }}{{ .Result.reqidtag }}, {{ else }}{{ end }}{{ if .Result.sweaudiotag }}{{ .Result.sweaudiotag }}, {{ else }}{{ end }}{{ if .Result.swesubtag }}{{ .Result.swesubtag }}, {{ else }}{{ end }}{{ if .Result.dkaudiotag }}{{ .Result.dkaudiotag }}, {{ else }}{{ end }}{{ if .Result.dksubtag }}{{ .Result.dksubtag }}, {{ else }}{{ end }}{{ if .Result.enaudiotag }}{{ .Result.enaudiotag }}, {{ else }}{{ end }}{{ if .Result.ensubtag }}{{ .Result.ensubtag }}, {{ else }}{{ end }}{{ if .Result.noaudiotag }}{{ .Result.noaudiotag }}, {{ else }}{{ end }}{{ if .Result.nosubtag }}{{ .Result.nosubtag }}{{ else }}{{ end }}"
+      text: "{{ if .Result._p2ptag }}{{ .Result._p2ptag }}, {{ else }}{{ end }}{{ if .Result._packtag }}{{ .Result._packtag }}, {{ else }}{{ end }}{{ if .Result._reqidtag }}{{ .Result._reqidtag }}, {{ else }}{{ end }}{{ if .Result._sweaudiotag }}{{ .Result._sweaudiotag }}, {{ else }}{{ end }}{{ if .Result._swesubtag }}{{ .Result._swesubtag }}, {{ else }}{{ end }}{{ if .Result._dkaudiotag }}{{ .Result._dkaudiotag }}, {{ else }}{{ end }}{{ if .Result._dksubtag }}{{ .Result._dksubtag }}, {{ else }}{{ end }}{{ if .Result._enaudiotag }}{{ .Result._enaudiotag }}, {{ else }}{{ end }}{{ if .Result._ensubtag }}{{ .Result._ensubtag }}, {{ else }}{{ end }}{{ if .Result._noaudiotag }}{{ .Result._noaudiotag }}, {{ else }}{{ end }}{{ if .Result._nosubtag }}{{ .Result._nosubtag }}{{ else }}{{ end }}"
       filters:
         - name: regexp
           args: "(.+?), $"
     description:
-      text: "{{ if .Result.titledesc }}Title: {{ .Result.titledesc }}</br>{{ else }}{{ end }}{{ if .Result.yeardesc }}Year: {{ .Result.yeardesc }}</br>{{ else }}{{ end }}{{ if .Result.genresdesc }}Genres: {{ .Result.genresdesc }}</br>{{ else }}{{ end }}{{ if .Result.taglinedesc }}Tagline: {{ .Result.taglinedesc }}</br>{{ else }}{{ end }}{{ if .Result.castdesc }}Cast: {{ .Result.castdesc }}</br>{{ else }}{{ end }}{{ if .Result.ratingdesc }}Rating: {{ .Result.ratingdesc }}</br>{{ else }}{{ end }}{{ if .Result.plotdesc }}Plot: {{ .Result.plotdesc }}</br>{{ else }}{{ end }}{{ if .Result.tagdesc }}Tags: {{ .Result.tagdesc }}</br>{{ else }}{{ end }}{{ if .Result.predatedesc }}PRE: {{ .Result.predatedesc }}</br>{{ else }}{{ end }}{{ if .Result.sectiondesc }}Section: {{ .Result.sectiondesc }}{{ else }}{{ end }}"
+      text: "{{ if .Result.title_desc }}Title: {{ .Result.title_desc }}</br>{{ else }}{{ end }}{{ if .Result.year }}Year: {{ .Result.year }}</br>{{ else }}{{ end }}{{ if .Result.genre }}Genres: {{ .Result.genre }}</br>{{ else }}{{ end }}{{ if .Result._tagline_desc }}Tagline: {{ .Result._tagline_desc }}</br>{{ else }}{{ end }}{{ if .Result._cast_desc }}Cast: {{ .Result._cast_desc }}</br>{{ else }}{{ end }}{{ if .Result._rating_desc }}Rating: {{ .Result._rating_desc }}</br>{{ else }}{{ end }}{{ if .Result._plot_desc }}Plot: {{ .Result._plot_desc }}</br>{{ else }}{{ end }}{{ if .Result._tag_desc }}Tags: {{ .Result._tag_desc }}</br>{{ else }}{{ end }}{{ if .Result._predate_desc }}PRE: {{ .Result._predate_desc }}</br>{{ else }}{{ end }}{{ if .Result._section_desc }}Section: {{ .Result._section_desc }}{{ else }}{{ end }}"
 # json rartracker api v1

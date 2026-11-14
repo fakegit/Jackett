@@ -1,7 +1,7 @@
 ---
 id: indietorrents
 name: Indietorrents
-description: "Indietorrents is a private Music tracker for independent music"
+description: "Indietorrents is a Private Music Torrent Tracker for independent MUSIC"
 language: en-GB
 encoding: UTF-8
 type: private
@@ -50,7 +50,7 @@ settings:
   - name: info_results
     type: info
     label: "Search results"
-    default: "This indexer does not support <b>Torrent Groups</b>.<br />On your account <i>Settings</i> change <b>Torrent grouping</b>  to <b>DO NOT Group torrents by default</b>."
+    default: "This indexer does not support <b>Torrent Groups</b>.<br />On your account <i>Settings</i> change <b>Torrent grouping</b> to <b>DO NOT Group torrents by default</b>."
 
 login:
   path: login.php?lang=
@@ -94,13 +94,13 @@ search:
     download:
       selector: a[href^="torrents.php?action=download&id="]
       attribute: href
-    tags:
+    _tags:
       selector: div.tags
     description:
       selector: td.edition_info
       filters:
         - name: append
-          args: "</br>{{ .Result.tags }}"
+          args: "</br>{{ .Result._tags }}"
     files:
       selector: td:nth-last-child(7)
     date:
@@ -110,7 +110,7 @@ search:
         - name: append
           args: " +00:00" # GMT
         - name: dateparse
-          args: "Jan 2 2006, 15:04 -07:00"
+          args: "MMM d yyyy, HH:mm zzz"
     size:
       selector: td:nth-last-child(5)
     grabs:

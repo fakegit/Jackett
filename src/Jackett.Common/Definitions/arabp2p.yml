@@ -2,13 +2,14 @@
 id: arabp2p
 name: ArabP2P
 description: "ArabP2P is an ARABIC Private Torrent Tracker for MOVIES / TV / GENERAL"
-language: ar-AR
+language: ar-AE
 type: private
 encoding: UTF-8
 links:
-  - https://www.arabp2p.com/
+  - https://www.arabp2p.net/
 legacylinks:
   - http://www.arabp2p.com/
+  - https://www.arabp2p.com/
 
 settings:
   - name: username
@@ -33,10 +34,15 @@ settings:
     options:
       2: desc
       1: asc
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "You must log in periodically. If the member is absent from the website for a period of 3 months, the account will be deleted without prior warning."
 
 caps:
   categorymappings:
     # المرئيات العربية Arabic Movies
+    - {id: 117, cat: TV, desc: "ارمضان 2026 (Ramadan)"}
     - {id: 14, cat: Movies, desc: "اسلامي (Islamic)"}
     - {id: 19, cat: TV/Documentary, desc: "وثائقي (Documentary)"}
     - {id: 70, cat: TV, desc: "تعليمي (Educational)"}
@@ -53,10 +59,13 @@ caps:
     - {id: 45, cat: TV/Foreign, desc: "مسلسلات وبرامج اجنبيه (Serials)"}
     - {id: 57, cat: TV/Foreign, desc: "مسلسلات آسيوية (Asian Series)"}
     - {id: 42, cat: Movies/Foreign, desc: "افلام اجنبيه (Foreign)"}
-    - {id: 76, cat: Movies/3D, desc: "&ثلاثي الابعاد 3D (3D)"}
     - {id: 74, cat: Movies/HD, desc: "جودة عالية HD"}
+    - {id: 113, cat: TV/Foreign, desc: "مسلسلات لاتينية مترجم.مدبلج(Latin Series"}
     - {id: 59, cat: Movies/Foreign, desc: "افلام آسيوية (Asian Movies)"}
     - {id: 86, cat: Movies/Foreign, desc: "افلام هنديه (Indian Movies)"}
+    - {id: 114, cat: Movies/Foreign, desc: "افلام لاتينية مترجم.مدبلج (Latin Movies)"}
+    - {id: 115, cat: TV/Foreign, desc: "مسلسلات تركية مترجم.مدبلج (Turkish Series)"}
+    - {id: 116, cat: Movies/Foreign, desc: "افلام تركية مترجم.مدبلج (Turkish Movies)"}
     # انمي مدبلج عربي Anime Arabic dubbed
     - {id: 98, cat: TV/Anime, desc: "افلام (Movies)"}
     - {id: 100, cat: TV/Anime, desc: "مسلسلات (Series)"}
@@ -70,18 +79,10 @@ caps:
     - {id: 25, cat: Audio, desc: "القران الكريم (The Holy Quran)"}
     - {id: 27, cat: Audio, desc: "محاضرات (Lectures)"}
     - {id: 26, cat: Audio, desc: "اناشيد (Chants)"}
+    - {id: 118, cat: Audio, desc: "برامج صوتية (Programs)"}
     # برامج  Software
     - {id: 22, cat: PC, desc: "برامج عربية (Arabic Software)"}
     - {id: 23, cat: PC, desc: "برامج عامه (Public Software)"}
-    - {id: 78, cat: PC/Mobile-iOS, desc: "iPad/iPhone"}
-    - {id: 79, cat: PC/Mobile-Android, desc: "android"}
-    # العاب  Games
-    - {id: 30, cat: PC/Games, desc: "PC"}
-    - {id: 31, cat: Console/PS3, desc: "PS2"}
-    - {id: 53, cat: Console/Wii, desc: "wii"}
-    - {id: 55, cat: Console/PSP, desc: "PSP"}
-    - {id: 63, cat: Console/XBox, desc: "XBOX"}
-    - {id: 64, cat: Console/PS3, desc: "PS3"}
     # اخرى Other
     - {id: 17, cat: Books, desc: "كتب (Books)"}
     - {id: 65, cat: Other, desc: "صور (Images)"}
@@ -96,7 +97,7 @@ caps:
     book-search: [q]
 
 login:
-  path: index.php?page=login
+  path: index.php
   method: form
   form: form[action^="index.php?page=login"]
   inputs:
@@ -110,12 +111,13 @@ login:
 
 search:
   paths:
-    # https://www.arabp2p.com/index.php?page=torrents&search=&category=0&active=0&internel=0
+    # https://www.arabp2p.net/index.php?page=torrents&search=&category=0&active=0&internel=0&order=3&by=2
     - path: index.php
   inputs:
     page: torrents
     search: "{{ .Keywords }}"
-    category: "{{ if .Categories }}{{ range .Categories }}{{.}};{{end}}{{ else }}0{{ end }}"
+    # does not support multi categories, default to All
+    category: 0
     # 0 all 1 activeonly 2 deadonly
     active: 0
     # 0 all 1 internal 2 external
@@ -123,39 +125,91 @@ search:
     order: "{{ .Config.sort }}"
     by: "{{ .Config.type }}"
     # does not support imdbid search or provide imdb link in results
+  keywordsfilters:
+    # Keep SxxEyy format for tv-search (Sonarr/Radarr). ArabP2P search does not reliably match
+    # when we convert to the Arabic bracket format unless the Arabic title is also present.
+    - name: re_replace # normalize "1x09" => "S1E09" (then pad below)
+      args: ["(?i)\\b(\\d{1,2})x(\\d{1,3})\\b", "S$1E$2"]
+    - name: re_replace # normalize "S01 E09" => "S01E09"
+      args: ["(?i)\\bS(\\d{1,2})\\s+E(\\d{1,3})\\b", "S$1E$2"]
+    - name: re_replace # pad season: S1E09 => S01E09
+      args: ["(?i)\\bS(\\d)(?=E)", "S0$1"]
+    - name: re_replace # pad episode: S01E9 => S01E09
+      args: ["(?i)E(\\d)\\b", "E0$1"]
+    - name: re_replace
+      args: ["\\s{2,}", " "]
+    - name: trim
 
   rows:
-    selector: table.torrent tr.torrent
+    selector: table#torrents_list_p > tbody > tr:has(a[href^="download.php?id="]), table#torrents_list_p > tbody > tr:has(a[href^="magnet:?xt="])
+    filters:
+      - name: andmatch
 
   fields:
     category:
-      selector: td a[href^="index.php?page=torrents&category="]
+      selector: a[href^="index.php?page=torrents&category="]:last-child
       attribute: href
       filters:
         - name: querystring
           args: category
     title:
-      selector: td a[href^="index.php?page=torrent-details"]
+      selector: a[href^="index.php?page=torrent-details"]
+      filters:
+        - name: re_replace
+          args: ["(?<=\\d)\\s+(?=\\d)", " "]
+        - name: re_replace
+          args: ["\\[(\\d+(?:[\\s-]+\\d+)*)\\]\\s*\\[(\\d{4})\\]\\s*\\[م(\\d+)\\]", "S$3E$1 [$2]"]
+        - name: re_replace
+          args: ["\\[(\\d+(?:[\\s-]+\\d+)*)\\]\\s*\\[م(\\d+)\\]", "S$2E$1"]
+        # English bracket forms used by YANGO / SHAHID / TOD packs:
+        #   [E08] [S01] / [E08-E09] [S01]  -> S01E08 / S01E08-E09
+        # [S05] [E02] / [S05] [E02 E03]  -> S05E02 / S05E02 E03
+        - name: re_replace
+          args: ["\\[(E\\d+(?:[\\s-]+E\\d+)?)\\]\\s*\\[(S\\d+)\\]", "$2$1"]
+        - name: re_replace
+          args: ["\\[(S\\d+)\\]\\s*\\[(E\\d+(?:[\\s-]+E\\d+)?)\\]", "$1$2"]
+        - name: re_replace
+          args: ["^\\[(\\d+(?:[\\s-]+\\d+)*)\\](?!\\s*\\[م)", "S01E$1"]
+        - name: re_replace
+          args: ["E(\\d+)[\\s-]+(\\d+)\\b", "E$1-E$2"]
+        - name: re_replace
+          args: ["\\[\\s*\\]", ""]
+        - name: re_replace
+          args: ["(?<=\\S)(\\[)", " $1"]
+        - name: re_replace
+          args: ["S(\\d)(?=E)", "S0$1"]
+        - name: re_replace
+          args: ["E(\\d)(?=\\D)", "E0$1"]
+        - name: re_replace
+          args: ["\\s{2,}", " "]
+        - name: trim
     details:
-      selector: td a[href^="index.php?page=torrent-details"]
+      selector: a[href^="index.php?page=torrent-details"]
       attribute: href
     download:
-      selector: td a[href^="download.php"]
+      selector: a[href^="download.php?id="]
       attribute: href
+      optional: true
+    magnet:
+      selector: a[href^="magnet:?xt="]
+      attribute: href
+      optional: true
+    poster:
+      selector: a.screenshot
+      attribute: rel
     date:
-      selector: td:nth-child(4) span
+      selector: span.upload-date > span
       attribute: title
+      # auto adjusted by site account profile
       filters:
-        - name: append
-          args: " +00:00" # auto adjusted by site account profile
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
-    seeders:
-      selector: td:nth-child(5)
-    leechers:
-      selector: td:nth-child(6)
+          args: "yy-MM-dd hh:mm:ss tt"
     size:
-      selector: td:nth-child(7)
+      selector: span.size
+    seeders:
+      selector: span[title="Seeders"]
+    leechers:
+      selector: span[title="Leechers"]
     downloadvolumefactor:
       case:
         span.free: 0

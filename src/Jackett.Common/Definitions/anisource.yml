@@ -5,10 +5,15 @@ description: "AniSource is a Public site for HD Anime raws."
 language: en-US
 type: public
 encoding: UTF-8
+requestDelay: 5
 links:
   - https://asnet.pw/
 
-settings: []
+settings:
+  - name: info_ipv6
+    type: info
+    label: IPv6 only
+    default: This site only accepts IPv6 addresses. If you are using IPv4 you will get a DNS Lookup Error OR a Connection Failure.
 
 caps:
   categorymappings:
@@ -24,15 +29,6 @@ search:
     - path: /
       inputs:
         tpage: 2
-    - path: /
-      inputs:
-        tpage: 3
-    - path: /
-      inputs:
-        tpage: 4
-    - path: /
-      inputs:
-        tpage: 5
   inputs:
     search: "{{ .Keywords }}"
 
@@ -51,12 +47,12 @@ search:
     details:
       selector: a[href*="/showprofile/"]
       attribute: href
-    download:
-      selector: a[href*="/download/"]
+    infohash:
+      selector: a[href*="/showprofile/"]
       attribute: href
-    magnet:
-      selector: a[href^="magnet:?xt="]
-      attribute: href
+      filters:
+        - name: regexp
+          args: ([A-F|a-f|0-9]{40})
     date:
       selector: font[color="Black"]
       filters:
@@ -67,7 +63,7 @@ search:
         - name: append
           args: " -09:00" # CUS
         - name: dateparse
-          args: "2006-01-02 15:04 -07:00"
+          args: "yyyy-MM-dd HH:mm zzz"
     size:
       selector: font[color="Black"]
       filters:

@@ -12,7 +12,8 @@ legacylinks:
 
 caps:
   categorymappings:
-    - {id: 401, cat: Movies, desc: "Movies"}
+    - {id: 401, cat: Movies, desc: "Movie"}
+    - {id: 401, cat: TV, desc: "TV"} # TV is  sub-cat of 401
     - {id: 402, cat: Audio, desc: "Music"}
     - {id: 403, cat: PC/Games, desc: "Game"}
     - {id: 404, cat: PC, desc: "Software"}
@@ -57,6 +58,10 @@ settings:
     type: info
     label: Results Per Page
     default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "If the account is not used regularly within 2 years, the system will automatically delete the account."
 
 login:
   path: takelogin.php
@@ -66,12 +71,13 @@ login:
     password: "{{ .Config.password }}"
     logout: ""
     securelogin: ""
-    ssl: ""
-    trackerssl: ""
+    ssl: yes
+    trackerssl: yes
   error:
     - selector: form#loginform > span.warning
   test:
-    path: torrents.php
+    path: index.php
+    selector: a[href="logout.php"]
 
 search:
   paths:
@@ -89,6 +95,7 @@ search:
     incldead: 0
     sort: "{{ .Config.sort }}"
     type: "{{ .Config.type }}"
+    notnewword: 1
 
   rows:
     selector: tr:has(td.name)
@@ -96,15 +103,20 @@ search:
       - name: andmatch
 
   fields:
-    category:
-      selector: td.category > a
-      attribute: href
-      filters:
-        - name: querystring
-          args: cat
     title:
       selector: td.name > div > a[href*="-torrent-"][title]
       attribute: title
+    category_is_tv_show:
+      text: "{{ .Result.title }}"
+      filters:
+        - name: regexp
+          args: "\\b(S\\d+(?:E\\d+)?)\\b"
+    categorydesc:
+      selector: td.category > a
+      attribute: title
+      filters:
+        - name: replace
+          args: ["movie", "{{ if .Result.category_is_tv_show }}tv{{ else }}movie{{ end }}"]
     details:
       selector: td.name > div > a[href*="-torrent-"][title]
       attribute: href
@@ -125,7 +137,7 @@ search:
       optional: true
       filters:
         - name: dateparse
-          args: "2006-01-0215:04:05"
+          args: "yyyy-MM-ddHH:mm:ss"
     date_ago:
       # 2 ngày<br/>23 giờ
       selector: td:nth-child(5):not(:contains("-"))
@@ -164,4 +176,7 @@ search:
         "*": 1
     minimumratio:
       text: 0.5
+    description:
+      selector: td:nth-child(3) > div:nth-child(2)
+      remove: a, b, font, img, span
 # NexusPHP 1.0

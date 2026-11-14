@@ -177,8 +177,13 @@ hr {
     text-align: center;
 }
 
-#jackett-allowext, #jackett-allowupdate, #jackett-logging, #jackett-prerelease, #jackett-cache-enabled {
+#jackett-allowext, #jackett-allowcors, #jackett-allowupdate, #jackett-logging, #jackett-prerelease, #jackett-cache-enabled {
     width: 25px;
+}
+
+[data-notify="container"].alert-danger {
+    overflow: auto;
+    max-height: 250px;
 }
 
 .modal-fillwidth {
@@ -247,7 +252,7 @@ pre {
     white-space: nowrap;
 }
 
-.dataTables_length select, .dataTables_filter input, .dataTable.compact tfoot td select {
+.dataTables_filter input, select {
     display: inline-block;
     height: 26px;
     padding: 0 8px;
@@ -299,6 +304,30 @@ table td.fit{
 
 .label-imdb {
     background-color: #d0ab44;
+}
+
+.label-tmdb {
+    background-color: #7dbfd4;
+}
+
+.label-tvdb {
+    background-color: #86cca8;
+}
+
+.label-tvmaze {
+    background-color: #73c3bd;
+}
+
+.label-trakt {
+    background-color: #ef1e25;
+}
+
+.label-douban {
+    background-color: #86cc10;
+}
+
+.tooltip {
+    pointer-events: none;
 }
 
 .tooltip-inner {
@@ -353,4 +382,12 @@ input#searchquery {
 
 .tagify .tagify__tag-text {
     text-transform: lowercase;
+}
+
+#searchResults .indexers .error{
+    color: Tomato;
+}
+
+#searchResults .indexers .no-results{
+    color: Grey;
 }

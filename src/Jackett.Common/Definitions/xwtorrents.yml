@@ -12,11 +12,19 @@ legacylinks:
 
 caps:
   categorymappings:
-    - {id: 74, cat: TV/Sport, desc: "AEW"}
-    - {id: 75, cat: TV/Sport, desc: "AEW HD"}
+    - {id: 82, cat: TV/Sport, desc: "AEW Collision"}
+    - {id: 83, cat: TV/Sport, desc: "AEW Collision HD"}
+    - {id: 74, cat: TV/Sport, desc: "AEW Dynamite"}
+    - {id: 75, cat: TV/Sport, desc: "AEW Dynamite HD"}
+    - {id: 78, cat: TV/Sport, desc: "AEW PPV's"}
+    - {id: 79, cat: TV/Sport, desc: "AEW PPV's HD"}
+    - {id: 76, cat: TV/Sport, desc: "AEW Rampage"}
+    - {id: 77, cat: TV/Sport, desc: "AEW Rampage HD"}
+    - {id: 90, cat: TV/Sport, desc: "AEW Vault"}
     - {id: 47, cat: TV/Sport, desc: "Boxing"}
     - {id: 14, cat: Movies, desc: "Documentary"}
     - {id: 20, cat: TV/Sport, desc: "DVD"}
+    - {id: 88, cat: Books, desc: "eBooks"}
     - {id: 2, cat: TV/Sport, desc: "ECW Original"}
     - {id: 26, cat: TV/Sport, desc: "ECW Weekly"}
     - {id: 21, cat: TV/Sport, desc: "Int Indy's"}
@@ -25,6 +33,8 @@ caps:
     - {id: 23, cat: TV/Sport, desc: "Misc"}
     - {id: 24, cat: TV/Sport, desc: "MMA"}
     - {id: 59, cat: TV/Sport, desc: "MMA HD"}
+    - {id: 86, cat: TV/Sport, desc: "Netflix"}
+    - {id: 87, cat: TV/Sport, desc: "Netflix HD"}
     - {id: 30, cat: TV/Sport, desc: "Packs"}
     - {id: 68, cat: TV/Sport, desc: "Podcasts"}
     - {id: 29, cat: TV/Sport, desc: "Puro"}
@@ -60,6 +70,7 @@ caps:
     - {id: 53, cat: TV/Sport, desc: "WWE Smackdown HD"}
     - {id: 43, cat: TV/Sport, desc: "WWE Superstars"}
     - {id: 54, cat: TV/Sport, desc: "WWE Superstars HD"}
+    - {id: 89, cat: TV/Sport, desc: "WWE Vault"}
     - {id: 19, cat: TV/Sport, desc: "WWE Velocity"}
     - {id: 31, cat: TV/Sport, desc: "WWE Vintage"}
 
@@ -67,8 +78,13 @@ caps:
     search: [q]
     tv-search: [q, season, ep]
     movie-search: [q]
+    book-search: [q]
 
 settings:
+  - name: info_2fa
+    type: info
+    label: "About 2FA"
+    default: "If you want to enable 2FA then use the XWtorrents2FA indexer instead."
   - name: username
     type: text
     label: Username
@@ -99,6 +115,8 @@ settings:
     options:
       desc: desc
       asc: asc
+  - name: info_flaresolverr
+    type: info_flaresolverr
 
 login:
   path: takelogin.php
@@ -137,17 +155,27 @@ search:
       filters:
         - name: querystring
           args: cat
+    download_1:
+      selector: a[href^="download.php"]
+      attribute: href
+    title_default:
+      # title can be missing so we use the &name= from the DL as a standby
+      text: "{{ .Result.download_1 }}"
+      filters:
+        - name: querystring
+          args: name
+        - name: replace
+          args: [".torrent", ""]
     title:
       selector: a[href^="details.php?id="]
       attribute: title
-    download1:
-      selector: a[href^="download.php"]
-      attribute: href
-    download2:
+      optional: true
+      default: "{{ .Result.title_default }}"
+    download_2:
       selector: a[href^="download2.php"]
       attribute: href
     download:
-      text: "{{ if .Config.seedbox }}{{ .Result.download2 }}{{ else }}{{ .Result.download1 }}{{ end }}"
+      text: "{{ if .Config.seedbox }}{{ .Result.download_2 }}{{ else }}{{ .Result.download_1 }}{{ end }}"
     details:
       selector: a[href^="details.php?id="]
       attribute: href
@@ -163,11 +191,10 @@ search:
       selector: td:nth-last-child(2)
     date:
       selector: td:nth-child(5)
+      # auto adjusted by site account profile
       filters:
-        - name: append
-          args: " -07:00" # PDT
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss"
     downloadvolumefactor:
       case:
         img[src="pic/freeleech.png"]: 0

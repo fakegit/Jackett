@@ -1,7 +1,7 @@
 ---
 id: docspedia
 name: DocsPedia
-description: "DocsPedia is a Private Torrent Tracker for E-learning"
+description: "DocsPedia is a Private Torrent Tracker for E-LEARNING"
 language: en-US
 type: private
 encoding: UTF-8
@@ -10,38 +10,53 @@ links:
 
 caps:
   categorymappings:
+    - {id: 77, cat: PC, desc: "3D Models"}
+    - {id: 83, cat: Books/EBook, desc: "Action/Adventure"}
+    - {id: 84, cat: Books/EBook, desc: "Art"}
     - {id: 65, cat: Audio, desc: "Audio"}
+    - {id: 85, cat: Books/EBook, desc: "Biographical"}
     - {id: 64, cat: Books/EBook, desc: "Books"}
-    - {id: 66, cat: TV, desc: "Business"}
+    - {id: 66, cat: Books, desc: "Business"}
     - {id: 68, cat: Books/Comics, desc: "Comics"}
-    - {id: 67, cat: TV, desc: "Development"}
-    - {id: 60, cat: TV/Documentary, desc: "Documentaries"}
+    - {id: 80, cat: Books, desc: "Coooking"}
+    - {id: 86, cat: Books/EBook, desc: "Crafts"}
+    - {id: 92, cat: Books/EBook, desc: "Crime/Thriller"}
+    - {id: 59, cat: TV/Documentary, desc: "Docs/Movies"}
+    - {id: 60, cat: TV/Documentary, desc: "Docs/TV"}
+    - {id: 79, cat: TV, desc: "Educational"}
+    - {id: 93, cat: Books/EBook, desc: "Fantasy"}
     - {id: 71, cat: Other, desc: "Fonts"}
-    - {id: 62, cat: Other, desc: "Graphic"}
+    - {id: 94, cat: Books/EBook, desc: "Gaming"}
+    - {id: 82, cat: Books/EBook, desc: "History"}
+    - {id: 87, cat: Books/EBook, desc: "Horror"}
     - {id: 72, cat: Books, desc: "IT Books"}
     - {id: 57, cat: Books/Mags, desc: "Magazine"}
-    - {id: 58, cat: TV, desc: "Medicine"}
+    - {id: 88, cat: Books/EBook, desc: "Math/Science/Tech"}
+    - {id: 58, cat: Books, desc: "Medicine"}
+    - {id: 95, cat: Books/EBook, desc: "Non-Fiction"}
     - {id: 70, cat: Books/EBook, desc: "Occult"}
-    - {id: 74, cat: Audio, desc: "Podcasts"}
+    - {id: 81, cat: Books/EBook, desc: "Photography"}
+    - {id: 74, cat: Audio/Other, desc: "Podcasts"}
     - {id: 69, cat: Other, desc: "PS Resources"}
+    - {id: 91, cat: Books/EBook, desc: "Romance"}
+    - {id: 89, cat: Books/EBook, desc: "Scinece Fiction"}
     - {id: 76, cat: Books, desc: "Self-Help"}
     - {id: 56, cat: TV/Sport, desc: "Sports"}
-    - {id: 59, cat: TV, desc: "Video"}
-    - {id: 61, cat: TV, desc: "Video tutorials"}
+    - {id: 90, cat: Books/EBook, desc: "Travel"}
+    - {id: 61, cat: Other, desc: "Tutorials"}
 
   modes:
     search: [q]
-    tv-search: [q]
+    tv-search: [q, season, ep]
     book-search: [q]
     music-search: [q]
 
 settings:
-  - name: username
+  - name: cookie
     type: text
-    label: Username
-  - name: password
-    type: password
-    label: Password
+    label: Cookie
+  - name: info_cookie
+    type: info_cookie
   - name: freeleech
     type: checkbox
     label: Search freeleech only
@@ -66,20 +81,16 @@ settings:
     type: info
     label: Results Per Page
     default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Accounts without activity in the first 28 days will be deleted automatically by the system."
 
 login:
-  path: login.php
-  method: form
-  form: form[action="takelogin.php"]
-  captcha:
-    type: image
-    selector: img.cimage
-    input: captcha
+  # using cookie method because login page has embedded Cloudflare turnstile
+  method: cookie
   inputs:
-    username: "{{ .Config.username }}"
-    password: "{{ .Config.password }}"
-  error:
-    - selector: div.subheader:contains("failed")
+    cookie: "{{ .Config.cookie }}"
   test:
     path: my.php
     selector: a[href$="logout.php"]
@@ -90,23 +101,24 @@ search:
   inputs:
     $raw: "{{ range .Categories }}c{{.}}=1&{{end}}"
     search: "{{ .Keywords }}"
-    # 0 active, 1 incldead, 2 onlydead, 3 freeleech, 4 480p, 5 720p, 6 1080p, 7 4k
-    incldead: "{{ if .Config.freeleech }}3{{ else }}1{{ end }}"
+    # 1 active, 0 incldead, 2 onlydead
+    incldead: 0
+    free: "{{ if .Config.freeleech }}1{{ else }}{{ end }}"
     sort: "{{ .Config.sort }}"
     type: "{{ .Config.type }}"
 
   rows:
-    selector: div.torrentrow:has(a[href^="download.php?torrent="])
+    selector: table.torrent-table > tbody > tr:has(a[href^="download.php?torrent="])
     filters:
       - name: andmatch
 
   fields:
     category:
-      selector: a[href^="browse.php?cat="]
+      selector: a[href^="browse.php?cats[]="]
       attribute: href
       filters:
         - name: querystring
-          args: cat
+          args: cats[]
     title:
       selector: a[href^="details.php?id="]
     details:
@@ -116,45 +128,30 @@ search:
       selector: a[href^="download.php?torrent="]
       attribute: href
     poster:
-      selector: a[onmouseover]
-      attribute: onmouseover
-      filters:
-        - name: regexp
-          args: "src=(.*?) width"
-    files:
-      selector: div.torrenttable:nth-last-child(6)
+      selector: a[href^="details.php?id="]
+      attribute: data-poster
+    date:
+      text: now
     size:
-      selector: div.torrenttable:nth-last-child(4)
+      selector: td.tt-size
     grabs:
-      selector: div.torrenttable:nth-last-child(3)
+      selector: a.val-grab
+      optional: true
+      default: 0
     seeders:
-      selector: div.torrenttable:nth-last-child(2)
+      selector: a.val-seed
+      optional: true
+      default: 0
     leechers:
-      selector: div.torrenttable:nth-last-child(1)
+      selector: a.val-leech
+      optional: true
+      default: 0
     downloadvolumefactor:
       case:
-        img[src$="images/free.png"]: 0
+        span.tag-free: 0
         "*": 1
     uploadvolumefactor:
       text: 1
-    date_year:
-      remove: a
-      # Jul 4 2019 08:04 AM
-      selector: div.torrenttable:nth-child(2):not(:contains("day"))
-      optional: true
-      filters:
-        - name: append
-          args: " +00:00" # auto adjusted by site account profile
-        - name: dateparse
-          args: "Jan 2 2006 03:04 PM -07:00"
-    date_day:
-      remove: a
-      # Today 02:40 PM
-      # Yesterday 09:10 AM
-      selector: div.torrenttable:nth-child(2):contains("day")
-      optional: true
-    date:
-      text: "{{ if or .Result.date_day .Result.date_year }}{{ or .Result.date_day .Result.date_year }}{{ else }}now{{ end }}"
     minimumratio:
       text: 1.0
     minimumseedtime:

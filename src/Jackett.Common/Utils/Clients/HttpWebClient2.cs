@@ -31,13 +31,21 @@ namespace Jackett.Common.Utils.Clients
                    c: c,
                    sc: sc)
         {
-            cookies = new CookieContainer();
+            cookies = new CookieContainer
+            {
+                PerDomainCapacity = 100 // By default, only 20 cookies are allowed per domain
+            };
             CreateClient();
         }
 
         [DebuggerNonUserCode] // avoid "Exception User-Unhandled" Visual Studio messages
-        public static bool ValidateCertificate(HttpRequestMessage request, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        public bool ValidateCertificate(HttpRequestMessage request, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
+            if (serverConfig.RuntimeSettings.IgnoreSslErrors == true)
+            {
+                return true;
+            }
+
             var hash = certificate.GetCertHashString();
 
             trustedCertificates.TryGetValue(hash, out var hosts);
@@ -56,8 +64,10 @@ namespace Jackett.Common.Utils.Clients
         {
             clearanceHandlr = new ClearanceHandler(serverConfig.FlareSolverrUrl)
             {
-                MaxTimeout = 55000,
-                ProxyUrl = serverConfig.GetProxyUrl(false)
+                MaxTimeout = serverConfig.FlareSolverrMaxTimeout,
+                ProxyUrl = serverConfig.GetProxyUrl(false),
+                ProxyUsername = serverConfig.ProxyUsername,
+                ProxyPassword = serverConfig.ProxyPassword
             };
             clientHandlr = new HttpClientHandler
             {
@@ -65,18 +75,16 @@ namespace Jackett.Common.Utils.Clients
                 AllowAutoRedirect = false, // Do not use this - Bugs ahoy! Lost cookies and more.
                 UseCookies = true,
                 Proxy = webProxy,
-                UseProxy = (webProxy != null),
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                UseProxy = webProxy != null,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                MaxConnectionsPerServer = 20,
+                ServerCertificateCustomValidationCallback = ValidateCertificate,
             };
-
-            // custom certificate validation handler (netcore version)
-            if (serverConfig.RuntimeSettings.IgnoreSslErrors == true)
-                clientHandlr.ServerCertificateCustomValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-            else
-                clientHandlr.ServerCertificateCustomValidationCallback = ValidateCertificate;
 
             clearanceHandlr.InnerHandler = clientHandlr;
             client = new HttpClient(clearanceHandlr);
+
+            SetTimeout(ClientTimeout);
         }
 
         // Called everytime the ServerConfig changes
@@ -90,26 +98,22 @@ namespace Jackett.Common.Utils.Clients
             }
         }
 
-        public override void Init()
+        public override void SetTimeout(int seconds)
         {
-            base.Init();
-
-            ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072;
+            ClientTimeout = seconds;
+            client.Timeout = TimeSpan.FromSeconds(ClientTimeout);
         }
 
         protected override async Task<WebResult> Run(WebRequest webRequest)
         {
-            HttpResponseMessage response = null;
             var request = new HttpRequestMessage();
             request.Headers.ExpectContinue = false;
             request.RequestUri = new Uri(webRequest.Url);
 
-            // clear cookies from cookiecontainer
-            var oldCookies = cookies.GetCookies(request.RequestUri);
-            foreach (Cookie oldCookie in oldCookies)
-                oldCookie.Expired = true;
+            // clear all the cookies from CookieContainer
+            CookieUtil.RemoveAllCookies(cookies);
 
-            // add cookies to cookiecontainer
+            // add cookies to CookieContainer
             if (!string.IsNullOrWhiteSpace(webRequest.Cookies))
             {
                 // don't include the path, Scheme is needed for mono compatibility
@@ -167,24 +171,23 @@ namespace Jackett.Common.Utils.Clients
                 request.Method = HttpMethod.Get;
             }
 
-            response = await client.SendAsync(request);
+            using var responseMessage = await client.SendAsync(request);
 
             var result = new WebResult
             {
-                ContentBytes = await response.Content.ReadAsByteArrayAsync()
+                ContentBytes = await responseMessage.Content.ReadAsByteArrayAsync()
             };
 
-            foreach (var header in response.Headers)
-            {
-                var value = header.Value;
-                result.Headers[header.Key.ToLowerInvariant()] = value.ToArray();
-            }
+            foreach (var header in responseMessage.Headers)
+                result.Headers[header.Key.ToLowerInvariant()] = header.Value.ToArray();
+            foreach (var header in responseMessage.Content.Headers)
+                result.Headers[header.Key.ToLowerInvariant()] = header.Value.ToArray();
 
             // some cloudflare clients are using a refresh header
             // Pull it out manually
-            if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && response.Headers.Contains("Refresh"))
+            if (responseMessage.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && responseMessage.Headers.Contains("Refresh"))
             {
-                var refreshHeaders = response.Headers.GetValues("Refresh");
+                var refreshHeaders = responseMessage.Headers.GetValues("Refresh");
                 var redirval = "";
                 var redirtime = 0;
                 if (refreshHeaders != null)
@@ -201,17 +204,21 @@ namespace Jackett.Common.Utils.Clients
                             // normally we don't want a serviceunavailable (503) to be a redirect, but that's the nature
                             // of this cloudflare approach..don't want to alter WebResult.IsRedirect because normally
                             // it shoudln't include service unavailable..only if we have this redirect header.
-                            response.StatusCode = System.Net.HttpStatusCode.Redirect;
+                            responseMessage.StatusCode = System.Net.HttpStatusCode.Redirect;
                             redirtime = int.Parse(value.Substring(0, end));
                             System.Threading.Thread.Sleep(redirtime * 1000);
                         }
                     }
                 }
             }
-            if (response.Headers.Location != null)
+
+            var redirectUri = RedirectUri(responseMessage);
+
+            if (redirectUri != null)
             {
-                result.RedirectingTo = response.Headers.Location.ToString();
+                result.RedirectingTo = redirectUri.AbsoluteUri;
             }
+
             // Mono won't add the baseurl to relative redirects.
             // e.g. a "Location: /index.php" header will result in the Uri "file:///index.php"
             // See issue #1200
@@ -227,14 +234,14 @@ namespace Jackett.Common.Utils.Clients
                 logger.Debug("[MONO relative redirect bug] Rewriting relative redirect URL from " + result.RedirectingTo + " to " + newRedirectingTo);
                 result.RedirectingTo = newRedirectingTo;
             }
-            result.Status = response.StatusCode;
+            result.Status = responseMessage.StatusCode;
 
             // Compatiblity issue between the cookie format and httpclient
             // Pull it out manually ignoring the expiry date then set it manually
             // http://stackoverflow.com/questions/14681144/httpclient-not-storing-cookies-in-cookiecontainer
             var responseCookies = new List<Tuple<string, string>>();
 
-            if (response.Headers.TryGetValues("set-cookie", out var cookieHeaders))
+            if (responseMessage.Headers.TryGetValues("set-cookie", out var cookieHeaders))
             {
                 foreach (var value in cookieHeaders)
                 {
@@ -242,7 +249,7 @@ namespace Jackett.Common.Utils.Clients
                     var nameSplit = value.IndexOf('=');
                     if (nameSplit > -1)
                     {
-                        responseCookies.Add(new Tuple<string, string>(value.Substring(0, nameSplit), value.Substring(0, value.IndexOf(';') == -1 ? value.Length : (value.IndexOf(';'))) + ";"));
+                        responseCookies.Add(new Tuple<string, string>(value.Substring(0, nameSplit), CookieUtil.SetCookieToCookiePair(value)));
                     }
                 }
 

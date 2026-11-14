@@ -1,15 +1,22 @@
 ---
 id: bwtorrents
 name: BwTorrents
-description: "BwTorrents is a Private Torrent Tracker for BollyWood MOVIES / TV / GENERAL"
+description: "BwTorrents is an INDIAN Private Torrent Tracker for MOVIES / TV"
 language: en-US
 type: private
 encoding: UTF-8
 links:
   - https://bwtorrents.tv/
+  - https://bwtorrents.cc/
+  - https://bwtorrents.xyz/
+  - https://bwtorrents.us/
+legacylinks:
   - https://bwtorrents.fun/
   - https://bwtorrents.xyz/
   - https://bwtorrents.us/
+  - https://bwtorrents.co/
+  - https://www.bwtorrents.life/
+  - https://www.bwtorrents.pro/
   - https://bwtorrents.live/
 
 caps:
@@ -120,6 +127,9 @@ caps:
     - {id: 217, cat: Movies, desc: "Tamil-Movies | Remuxes BluRay"}
     - {id: 218, cat: TV, desc: "TV-Ishara TV"}
     - {id: 219, cat: TV, desc: "TV-Bengali Tv"}
+    - {id: 220, cat: TV, desc: "TV-Shemaroo Umang"}
+    - {id: 221, cat: TV, desc: "TV-JioTv"}
+    - {id: 222, cat: Movies, desc: "Hybrid"}
 
   modes:
     search: [q]
@@ -139,6 +149,12 @@ settings:
     type: checkbox
     label: Search freeleech only
     default: false
+  - name: info_flaresolverr
+    type: info_flaresolverr
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Account activity:<ol><li>Zero activity accounts (0 bytes download and 0 bytes upload) are automatically deleted after 30 days</li><li>Inactive accounts under VIP and without parked are automatically deleted after 40 days.</li></ol>"
 
 login:
   path: takelogin.php
@@ -167,6 +183,8 @@ search:
 
   rows:
     selector: table[width="1200"] > tbody > tr:has(a[href^="download.php/"])
+    filters:
+      - name: andmatch
 
   fields:
     category:
@@ -184,11 +202,10 @@ search:
       selector: td:nth-child(3)
     date:
       selector: td:nth-child(5)
+      # auto adjusted by site account profile
       filters:
-        - name: append
-          args: " +00:00" # auto adjusted by site account profile
         - name: dateparse
-          args: "02-01-200615:04:05 -07:00"
+          args: "dd-MM-yyyyHH:mm:ss"
     size:
       selector: td:nth-child(6)
     download:
@@ -208,6 +225,17 @@ search:
       case:
         img[src="pic/double_upload.png"]: 2
         "*": 1
+    genre:
+      selector: td:nth-child(2)
+      filters:
+        - name: regexp
+          args: "Genre:\\s(.+?)$"
+        - name: replace
+          args: [", ", ","]
+        - name: replace
+          args: [" ", "_"]
+    description:
+      text: "{{ .Result.genre }}"
     minimumratio:
       text: 1.0
     minimumseedtime:

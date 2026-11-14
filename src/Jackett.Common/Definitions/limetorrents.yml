@@ -5,54 +5,20 @@ description: "LimeTorrents is a Public general torrent index with mostly verifie
 language: en-US
 type: public
 encoding: UTF-8
-followredirect: true
-# changes to this indexer should also be made to limetorrentsclone
 links:
-  - https://www.limetorrents.pro/
-  - https://limetorrents.unblockit.tv/
-  - https://limetorrents.unblockninja.com/
-  - https://limetorrents.nocensor.biz/
+  - https://www.limetorrents.fun/
+  - https://limetorrents.ninjaproxy1.com/
+  - https://limetorrents.proxyninja.org/
+  - https://limetorrents.torrentbay.st/
+  - https://limetorrents.torrentsbay.org/
 legacylinks:
-  - https://www.limetorrents.io/
-  - https://www.limetorrents.cc/
-  - https://www.limetorrents.me/
-  - https://www.limetorrents.zone/ # redirects to .info
-  - https://limetorrents.unblockit.pro/
-  - https://limetorrents.unblockit.one/
-  - https://limetorrents.black-mirror.xyz/
-  - https://limetorrents.unblocked.casa/
-  - https://limetorrents.proxyportal.fun/
-  - https://limetorrents.uk-unblock.xyz/
-  - https://limetorrents.ind-unblock.xyz/
-  - https://limetorrents.unblocked.bar/
-  - https://limetorrents.proxyportal.pw/
-  - https://limetorrents.uk-unblock.pro/
-  - https://limetorrents.unblockit.me/
-  - https://limetorrents.unblockit.pw/
-  - https://limetorrents.unblockit.id/
-  - https://limetorrents.unblockit.win/
-  - https://limetorrents.unblockit.top/
-  - https://limetorrents.unblockit.lat/
-  - https://limetorrents.unblockit.app/
-  - https://limetorrents.unblockit.dev/
-  - https://limetorrents.unblockit.ltd/
-  - https://limetorrents.unblockit.link/
-  - https://limetorrents.unblockit.buzz/
-  - https://limetorrents.unblockit.club/
-  - https://limetorrents.unblockit.onl/
-  - https://www.limetorrents.info/
-  - https://www.limetorrents.asia/
-  - https://www.limetorrents.co/
-  - https://limetor.com/
-  - https://www.limetor.pro/
-  - https://limetorrents.unblockit.li/
-  - https://limetorrents.unblockit.uno/
-  - https://limetorrents.unblockit.ch/
-  - https://limetorrents.nocensor.space/
-  - https://limetorrents.unblockit.ws/
-  - https://limetorrents.nocensor.work/
-  - https://limetorrents.unblockit.kim/
-  - https://limetorrents.unblockit.bz/
+  - https://limetorrents.mrunblock.bond/
+  - https://limetorrents.nocensor.cloud/
+  - https://limetorrents.abcproxy.org/
+  - https://limetorrents.unblockit.download/
+  - https://www.limetorrents.lol/
+  - https://limetorrents.unblockninja.com/
+  - https://limetorrents.proxyninja.net/
 
 caps:
   categorymappings:
@@ -63,27 +29,29 @@ caps:
     - {id: Applications, cat: PC/0day, desc: Applications}
     - {id: Other, cat: Other, desc: Other}
     - {id: Anime, cat: TV/Anime, desc: Anime}
+    - {id: E-books, cat: Books/EBook, desc: E-books}
 
   modes:
     search: [q]
     tv-search: [q, season, ep]
     movie-search: [q]
     music-search: [q]
+    book-search: [q]
 
 settings:
-  - name: downloadlink
+  - name: primarydownloadlink
     type: select
-    label: Download link
+    label: Primary Download link
     default: "magnet:"
     options:
-      "http://itorrents.org/": iTorrents.org
+      "//itorrents.": iTorrents
       "magnet:": magnet
-  - name: downloadlink2
+  - name: fallbackdownloadlink
     type: select
-    label: Download link (fallback)
-    default: "http://itorrents.org/"
+    label: Fallback Download link
+    default: "//itorrents."
     options:
-      "http://itorrents.org/": iTorrents.org
+      "//itorrents.": iTorrents
       "magnet:": magnet
   - name: info_download
     type: info
@@ -97,7 +65,7 @@ settings:
       date: created
       seeds: seeders
       size: size
-  - name: info_8000
+  - name: info_category_8000
     type: info
     label: About LimeTorrents Categories
     default: LimeTorrents only returns category <b>Other</b> in its <i>Keywordless</i> search results page.</br>To pass your apps' indexer TEST you will need to include the 8000(Other) category.
@@ -105,10 +73,16 @@ settings:
 download:
   # the .torrent url is on the on the details page
   selectors:
-    - selector: a.csprite_dltorrent[href^="{{ .Config.downloadlink }}"]
+    - selector: a.csprite_dltorrent[href*="{{ .Config.primarydownloadlink }}"]
       attribute: href
-    - selector: a.csprite_dltorrent[href^="{{ .Config.downloadlink2 }}"]
+      filters:
+        - name: replace
+          args: ["http://itorrents.org/", "https://itorrents.net/"]
+    - selector: a.csprite_dltorrent[href*="{{ .Config.fallbackdownloadlink }}"]
       attribute: href
+      filters:
+        - name: replace
+          args: ["http://itorrents.org/", "https://itorrents.net/"]
 
 search:
   paths:
@@ -121,18 +95,6 @@ search:
     selector: .table2 > tbody > tr[bgcolor]
 
   fields:
-    category:
-      text: Other
-    category|noappend:
-      optional: true
-      selector: td:nth-child(2)
-      filters:
-        - name: split
-          args: ["-", 1]
-        - name: replace
-          args: [" in ", ""]
-        - name: replace
-          args: [".", ""]
     title:
       selector: div.tt-name > a[href^="/"]
       attribute: href
@@ -141,6 +103,18 @@ search:
           args: "/(.+?)-torrent-\\d+\\.html"
         - name: re_replace
           args: ["-", " "]
+    category_is_tv_show:
+      text: "{{ .Result.title }}"
+      filters:
+        - name: regexp
+          args: "\\b(S\\d+(?:E\\d+)?)\\b"
+    category:
+      selector: td:nth-child(2)
+      optional: true
+      default: "{{ if .Result.category_is_tv_show }}TV shows{{ else }}Other{{ end }}"
+      filters:
+        - name: regexp
+          args: " in (.+?)[.]?$"
     details:
       selector: div.tt-name > a[href^="/"]
       attribute: href

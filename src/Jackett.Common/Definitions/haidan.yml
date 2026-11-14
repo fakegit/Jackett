@@ -6,9 +6,9 @@ language: zh-CN
 type: private
 encoding: UTF-8
 links:
-  - https://www.haidan.video/
-legacylinks:
   - https://www.haidan.cc/
+legacylinks:
+  - https://www.haidan.video/
 
 caps:
   categorymappings:
@@ -24,8 +24,8 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q, season, ep, imdbid]
-    movie-search: [q, imdbid]
+    tv-search: [q, season, ep, imdbid, doubanid]
+    movie-search: [q, imdbid, doubanid]
     music-search: [q]
 
 settings:
@@ -63,6 +63,12 @@ settings:
     type: info
     label: Alert
     default: HaiDan has switched to a <b>group</b> torrent list, which means this Indexer can only display the first item in each group.<br>This <b>yml</b> Indexer will eventually be re-written in c# as soon as a c# dev volunteers, to display all items in a group.
+  - name: info_flaresolverr
+    type: info_flaresolverr
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Account retention rules:<ol><li>Veteran User and above will be retained forever</li><li>Elite User and above will not have their account deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 400 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users with no traffic (ie, upload/download data are both 0) will be deleted if they do not log in for 100 consecutive days.</li></ol>"
 
 login:
   path: login.php
@@ -90,17 +96,18 @@ search:
     - path: torrents.php
   inputs:
     $raw: "{{ range .Categories }}cat{{.}}=1&{{end}}"
-    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}"
+    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}{{ .Query.DoubanID }}{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}{{ .Keywords }}{{ else }}{{ end }}"
     # 0 incldead, 1 active, 2 dead
     incldead: 0
     # 0 all, 1 normal, 2 free, 3 2x, 4 2xfree, 5 50%, 6 2x50%, 7 30%
     spstate: "{{ if .Config.freeleech }}2{{ else }}0{{ end }}"
     # 0 title, 1 descr, 3 uploader, 4 imdburl
-    search_area: "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}"
+    search_area: "{{ if .Query.IMDBID }}4{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}1{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}0{{ else }}{{ end }}"
     # 0 AND, 1 OR, 2 exact
     search_mode: 0
     sort: "{{ .Config.sort }}"
     type: "{{ .Config.type }}"
+    notnewword: 1
 
   rows:
     selector: div.group_content:has(a[href^="download.php?id="])
@@ -118,10 +125,11 @@ search:
       filters:
         - name: replace
           args: ["年份:", " "]
-    _title:
-      selector: a.video_name_str
     title:
-      text: "{{ .Result._title }}{{ .Result.year }}"
+      selector: a.video_name_str
+      filters:
+        - name: append
+          args: "{{ .Result.year }}"
     details:
       selector: a.video_name_str
       attribute: href
@@ -129,7 +137,6 @@ search:
       selector: a[href^="download.php?id="]
       attribute: href
     description:
-      optional: true
       selector: div.torrent_name_col > a
     poster:
       selector: img#poster
@@ -137,25 +144,9 @@ search:
     imdbid:
       selector: a[href*="imdb.com/title/tt"]
       attribute: href
-    date:
-      # time type: time elapsed (default)
-      selector: div.time_col span[title]
-      attribute: title
-      optional: true
-      filters:
-        - name: append
-          args: " +08:00" # CST
-        - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
-    date:
-      # time added
-      selector: div.time_col:not(:has(span))
-      optional: true
-      filters:
-        - name: append
-          args: " +08:00" # CST
-        - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+    doubanid:
+      selector: a[href*="movie.douban.com/subject/"]
+      attribute: href
     size:
       # group size.  item size
       selector: div.group > div.video_size, div.torrent_item > div.video_size
@@ -179,20 +170,30 @@ search:
         img.pro_free2up: 2
         img.pro_2up: 2
         "*": 1
-    date:
-      # time added
-      selector: div.time_col:contains("发布于"):not(:has(span[title]))
-      remove: a # drop uploader
+    date_elapsed:
+      # time type: time elapsed (default)
+      selector: div.time_col > span[title]
+      attribute: title
       optional: true
       filters:
-        - name: replace # remove the 'posted on' tag
-          args: ["发布于", ""]
-        - name: replace # remove anonymous tag
-          args: ["匿名", ""]
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
+    date_added:
+      # time added
+      selector: div.time_col:contains("发布于"):not(:has(span[title]))
+      optional: true
+      remove: span
+      filters:
+        - name: replace # remove the 'posted on' tag
+          args: ["发布于", ""]
+        - name: append
+          args: " +08:00" # CST
+        - name: dateparse
+          args: "yyyy-MM-dd HH:mm:ss zzz"
+    date:
+      text: "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
     minimumratio:
       text: 1.0
 # NexusPHP Standard v1.5 Beta 4 customised

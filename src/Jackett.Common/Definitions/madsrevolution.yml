@@ -1,7 +1,7 @@
 ---
 id: madsrevolution
 name: MaDs Revolution
-description: "MaDs Revolution is a Private GERMAN site for MOVIES / TV / GENERAL"
+description: "MaDs Revolution is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL"
 language: de-DE
 type: private
 encoding: UTF-8
@@ -62,15 +62,15 @@ caps:
     - {id: 33, cat: XXX, desc: "XXX DVD-R"}
     - {id: 10, cat: XXX, desc: "XXX Unsorted"}
     - {id: 5, cat: TV/Anime, desc: "Misc Anime"}
-    - {id: 6, cat: TV/Anime, desc: "Misc Hentai"}
+    - {id: 6, cat: XXX, desc: "Misc Hentai"}
     - {id: 19, cat: Other, desc: "Misc Other"}
 
   modes:
     search: [q]
-    tv-search: [q, season, ep]
-    movie-search: [q]
-    music-search: [q]
-    book-search: [q]
+    tv-search: [q, season, ep, genre]
+    movie-search: [q, genre]
+    music-search: [q, genre]
+    book-search: [q, genre]
 
 settings:
   - name: username
@@ -103,6 +103,10 @@ settings:
     options:
       DESC: desc
       ASC: asc
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "After 8 weeks of inactivity, the account will be automatically deleted."
 
 login:
   path: login.php
@@ -121,8 +125,14 @@ search:
   paths:
     - path: torrents.php
   inputs:
-    $raw: "{{ range .Categories }}filter_cat[{{.}}]=1&{{end}}{{ if .Config.freeleech }}action=uploadonly&{{ else }}{{ end }}"
+    $raw: "{{ range .Categories }}filter_cat[{{.}}]=1&{{end}}"
+    action: "{{ if .Config.freeleech }}uploadonly{{ else }}{{ end }}"
     searchstr: "{{ .Keywords }}"
+    searchtags: "{{ .Query.Genre }}"
+    # 0 any, 1 all
+    tags_type: 0
+    order_by: "{{ .Config.sort }}"
+    order_way: "{{ .Config.type }}"
     # site does not support imdbid searching or present imdb links in results.
 
   rows:
@@ -149,13 +159,17 @@ search:
       filters:
         - name: regexp
           args: "src=(.+?) "
+    genre:
+      selector: div.tags
+    description:
+      text: "{{ .Result.genre }}"
     date:
       selector: td:nth-last-child(5)
       filters:
         - name: append
           args: " +01:00" # CET
         - name: dateparse
-          args: "02 Jan 2006, 15:04 -07:00"
+          args: "dd MMM yyyy, HH:mm zzz"
     size:
       selector: td:nth-last-child(4)
     grabs:

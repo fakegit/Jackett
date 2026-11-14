@@ -1,7 +1,7 @@
 ---
 id: btschool
 name: BTSCHOOL
-description: "BTSCHOOL is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL"
+description: "BTSCHOOL is a CHINESE Private Torrent Tracker for HD MOVIES / TV"
 language: zh-CN
 type: private
 encoding: UTF-8
@@ -24,35 +24,62 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q, season, ep, imdbid]
-    movie-search: [q, imdbid]
+    tv-search: [q, season, ep, imdbid, doubanid]
+    movie-search: [q, imdbid, doubanid]
     music-search: [q]
 
 settings:
-  - name: cookie
+  - name: username
     type: text
-    label: Cookie
-  - name: info
-    type: info
-    label: How to get the Cookie
-    default: "<ol><li>Login to this tracker with your browser<li>Open the <b>DevTools</b> panel by pressing <b>F12</b><li>Select the <b>Network</b> tab<li>Click on the <b>Doc</b> button (Chrome Browser) or <b>HTML</b> button (FireFox)<li>Refresh the page by pressing <b>F5</b><li>Click on the first row entry<li>Select the <b>Headers</b> tab on the Right panel<li>Find <b>'cookie:'</b> in the <b>Request Headers</b> section<li><b>Select</b> and <b>Copy</b> the whole cookie string <i>(everything after 'cookie: ')</i> and <b>Paste</b> here.</ol>"
+    label: Username
+  - name: password
+    type: password
+    label: Password
   - name: freeleech
     type: checkbox
     label: Search freeleech only
     default: false
-  - name: flaresolverr
-    type: info
-    label: FlareSolverr
-    default: This site may use Cloudflare DDoS Protection, therefore Jackett requires <a href="https://github.com/Jackett/Jackett#configuring-flaresolverr" target="_blank">FlareSolver</a> to access it.
+  - name: sort
+    type: select
+    label: Sort requested from site
+    default: 4
+    options:
+      4: created
+      7: seeders
+      5: size
+      1: title
+  - name: type
+    type: select
+    label: Order requested from site
+    default: desc
+    options:
+      desc: desc
+      asc: asc
+  - name: info_flaresolverr
+    type: info_flaresolverr
   - name: info_tpp
     type: info
     label: Results Per Page
     default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Cherish your user account. Inactive accounts would be deleted based on the following rules:<ol><li>Extreme User or above would never be deleted.</li><li>Veteran User or above would never be deleted if parked (at User CP).</li><li>Parked accounts would be deleted if users have not logged in for more than 365 days in a row.</li><li>Unparked accounts would be deleted if users have not logged in for more than 150 days in a row.</li><li>Accounts with both uploaded and downloaded amount being 0 would be deleted if users have not logged in for more than 30 days in a row.</li></ol>"
 
 login:
-  method: cookie
+  path: login.php
+  method: form
+  form: form[action="takelogin.php"]
+  captcha:
+    type: image
+    selector: img[alt="CAPTCHA"]
+    input: imagestring
   inputs:
-    cookie: "{{ .Config.cookie }}"
+    username: "{{ .Config.username }}"
+    password: "{{ .Config.password }}"
+  error:
+    - selector: td.embedded:has(h2:contains("登錄失敗"))
+    - selector: td.embedded:has(h2:contains("失败"))
   test:
     path: index.php
     selector: a[href="logout.php"]
@@ -62,17 +89,18 @@ search:
     - path: torrents.php
   inputs:
     $raw: "{{ range .Categories }}cat{{.}}=1&{{end}}"
-    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}"
+    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}{{ .Query.DoubanID }}{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}{{ .Keywords }}{{ else }}{{ end }}"
     # 0 incldead, 1 active, 2 justdead
     incldead: 0
     # promotion: 0 all, 1 normal, 2 free, 3 2x, 4 2xfree, 5 50%, 6 2x 50%, 7 30%
     spstate: "{{ if .Config.freeleech }}2{{ else }}0{{ end }}"
     # 0 title, 1 descr, 3 uploader, 4 imdb
-    search_area: "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}"
+    search_area: "{{ if .Query.IMDBID }}4{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}1{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}0{{ else }}{{ end }}"
     # 0 AND, 1 OR, 2 exact
     search_mode: 0
-    sort: 4
-    type: desc
+    sort: "{{ .Config.sort }}"
+    type: "{{ .Config.type }}"
+    notnewword: 1
 
   rows:
     selector: table.torrents > tbody > tr:has(table.torrentname)
@@ -102,7 +130,7 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     date_added:
       # time added
       selector: td:nth-child(4):not(:has(span))
@@ -111,17 +139,25 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss zzz"
     date:
       text: "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
     size:
       selector: td.rowfollow:nth-child(5)
+      optional: true
+      default: 512MB
     seeders:
       selector: td.rowfollow:nth-child(6)
+      optional: true
+      default: 0
     leechers:
       selector: td.rowfollow:nth-child(7)
+      optional: true
+      default: 0
     grabs:
       selector: td.rowfollow:nth-child(8)
+      optional: true
+      default: 0
     downloadvolumefactor:
       case:
         img.pro_free: 0
@@ -140,5 +176,5 @@ search:
       text: 1.0
     description:
       selector: td:nth-child(2)
-      remove: a, img
+      remove: a, b, font, img, span
 # NexusPHP Standard v1.5 Beta 4

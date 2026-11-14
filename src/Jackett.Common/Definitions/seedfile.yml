@@ -6,8 +6,9 @@ language: ro-RO
 type: private
 encoding: UTF-8
 links:
-  - https://www.seedfile.io/
+  - https://seedfile.io/
 legacylinks:
+  - https://www.seedfile.io/
   - https://www.seedfile.ro/
 
 caps:
@@ -36,7 +37,10 @@ caps:
     - {id: 23, cat: Audio/Video, desc: "Video Clip"}
     - {id: 24, cat: XXX, desc: "Adult 18+"}
     - {id: 36, cat: Movies/3D, desc: "Video 3D"}
-    - {id: 37, cat: Movies/HD, desc: "Animație HD"}
+    - {id: 37, cat: Movies/UHD, desc: "Filme 4K"}
+    - {id: 38, cat: Movies/UHD, desc: "Filme 4K RO"}
+    - {id: 40, cat: Movies/BluRay, desc: "Filme Blu-Ray RO"}
+    - {id: 41, cat: TV/UHD, desc: "Seriale 4K"}
 
   modes:
     search: [q]
@@ -56,6 +60,10 @@ settings:
     type: checkbox
     label: Search freeleech only
     default: false
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Typically, (unparked) accounts are deleted after one year from last access. With account parking, the maximum period of inactivity is 2 years, after which the account will be deleted."
 
 login:
   path: takelogin.php
@@ -66,16 +74,12 @@ login:
   error:
     - selector: div.recover-error2
   test:
-    path: profile.php
-
-download:
-  selectors:
-    - selector: a[href^="download.php/"]
-      attribute: href
+    path: home
+    selector: a[href^="/logout.php?id="]
 
 search:
   paths:
-    - path: download-torrents
+    - path: browse
   inputs:
     $raw: "{{ range .Categories }}c{{.}}=1&{{end}}"
     search: "{{ .Keywords }}"
@@ -83,73 +87,53 @@ search:
     incldead: "{{ if .Config.freeleech }}3{{ else }}1{{ end }}"
 
   rows:
-    selector: tr.browse
+    selector: div.tt-row
 
   fields:
     category:
-      selector: a[href^="torrents.php?cat="]
+      selector: a[href^="/torrents.php?cat="]
       attribute: href
       filters:
         - name: querystring
           args: cat
     title:
-      selector: a[href^="details.php?id="]
+      selector: a[href^="/torrent/"]
+      attribute: title
     details:
-      selector: a[href^="details.php?id="]
+      selector: a[href^="/torrent/"]
       attribute: href
     download:
-      selector: a[href^="details.php?id="]
+      selector: a[href^="/download/"]
       attribute: href
+    poster:
+      selector: a[href^="/torrent/"]
+      attribute: data-poster
     files:
-      selector: td:nth-last-child(7)
+      selector: div.tt-files
     date:
-      selector: td:nth-last-child(5)
+      selector: div.tt-date
       filters:
-        # translations for Turkish|Estonian|Danish|Italian|Polish|Norwegian|Portuguese|Czech|Russian|Romanian|Spanish|French|German|Bulgarian|Dutch|Chinese|Japanese|Swedish
-        - name: re_replace
-          args: ["(?i)(önce|tagasi|geleden|fa|temu|siden|há|atrás|nazpět|назад|acum|în urmă|hace|il y a|vor|преди|前|sedan)", " ago"]
-        - name: re_replace
-          args: ["(?i)(saniye|sekundit|sekunder|secondi|sekund|segundos|sekundami|секунд|secunde|secondes|Sekunden|секунди|seconden|秒前)", "seconds"]
-        - name: re_replace
-          args: ["(?i)(minutit|minutter|minuti|minuty|minutos|минуты|минут|Minuten|минути|minuten|minuter)", "minutes"]
-        - name: re_replace
-          args: ["(?i)(dakika|minut|minuto|minuta|minutt|минута|Minute|minuut|分钟|分)", " minute"]
-        - name: re_replace
-          args: ["(?i)(tundi|timer|ore|godziny|horas|hodiny|hoden|часа|часов|ore|heures|Stunden|timmar)", "hours"]
-        - name: re_replace
-          args: ["(?i)(saat|tund|time|ora|godzina|hora|hodina|час|oră|heure|Stunde|uur|小时|時間|timme)", " hour"]
-        - name: re_replace
-          args: ["(?i)(päeva|dage|giorni|dni|dias|dny|дня|дней|zile|días|jours|Tagen|дни|dagen|dagar)", "days"]
-        - name: re_replace
-          args: ["(?i)(gün|päev|dag|giorno|dzień|dia|den|день|zi|día|jour|Tag|ден|天|日)", " day"]
-        - name: re_replace
-          args: ["(?i)(nädalat|uger|settimane|tygodnie|uker|semanas|týdny|недели|недель|săptămâni|semaines|Wochen|седмици|weken|veckor)", "weeks"]
-        - name: re_replace
-          args: ["(?i)(hafta|nädal|uge|settimana|tydzień|uke|semana|týden|неделю|săptămână|semaine|Woche|седмица|周|週間|vecka)", " week"]
-        - name: re_replace
-          args: ["(?i) (ay)", "month"]
-        - name: re_replace
-          args: ["(?i)(kuud|måneder|mesi|miesiące|meses|měsíce|месяца|месяцев|luni|meses|mois|Monaten|месеца|maanden|månader)", "months"]
-        - name: re_replace
-          args: ["(?i)(kuu|måned|mese|miesiąc|mês|měsíc|месяц|lună|mes|Monat|месец|maand|个月|ヶ月|månad)", " month"]
-        - name: re_replace
-          args: ["(?i)(aastat|anni|lata|anos|roky|года|ani|años|ans|Jahren|години)", " years"]
-        - name: re_replace
-          args: ["(?i)(yil|aasta|år|anno|rok|ano|год|año|Jahr|година|jaar|年)", " year"]
-        - name: re_replace
-          args: ["(?i) (an)", "year"]
-        - name: re_replace
-          args: ["(?i)(För |und)", ""] # Misc removals
-        - name: timeago
+        - name: append
+          args: " +02:00" # EET
+        - name: dateparse
+          args: "HH:mm:ssyyyy-MM-dd zzz"
     size:
-      selector: td:nth-last-child(4)
+      selector: div.tt-size
+    grabs:
+      selector: div.tt-compl
     seeders:
-      selector: td:nth-last-child(3)
+      selector: div.tt-seed
     leechers:
-      selector: td:nth-last-child(2)
+      selector: div.tt-leech
+    genre:
+      selector: span.tb-genre
+    description:
+      case:
+        span.tt-mod-ok: "Verified: {{ .Result.genre }}"
+        "*": "Unverified: {{ .Result.genre }}"
     downloadvolumefactor:
       case:
-        "img[src=\"./pic/freeleech.png\"]": 0
+        span.tb-fl: 0
         "*": 1
     uploadvolumefactor:
       text: 1

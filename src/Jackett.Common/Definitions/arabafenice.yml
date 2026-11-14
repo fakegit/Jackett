@@ -1,7 +1,7 @@
 ---
 id: arabafenice
 name: ArabaFenice
-description: "Araba Fenice (Phoenix) is an ITALIAN Private site for TV / MOVIES / GENERAL"
+description: "Araba Fenice (Phoenix) is an ITALIAN Private Torrent Tracker for MOVIES / TV / GENERAL"
 language: it-IT
 type: private
 encoding: UTF-8
@@ -124,6 +124,7 @@ login:
             args: ["');", ""]
   test:
     path: index.php
+    selector: a[href="logout.php"]
 
 download:
   before:
@@ -206,7 +207,7 @@ search:
         - name: append
           args: " +01:00" # CET
         - name: dateparse
-          args: "02/01/2006 -07:00"
+          args: "dd/MM/yyyy zzz"
     grabs:
       selector: td:nth-last-child(6)
     seeders:

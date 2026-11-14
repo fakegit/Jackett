@@ -6,10 +6,10 @@ language: lt-LT
 type: private
 encoding: UTF-8
 links:
-  - https://torrent.lt/
+  - https://torrent.ai/
 legacylinks:
   - http://www.torrent.ai/
-  - https://torrent.ai/
+  - https://torrent.lt/
 
 caps:
   categorymappings:
@@ -87,13 +87,12 @@ caps:
     book-search: [q]
 
 settings:
-  - name: cookie
+  - name: username
     type: text
-    label: Cookie
-  - name: info
-    type: info
-    label: How to get the Cookie
-    default: "<ol><li>Login to this tracker in your browser<li>Open the <b>DevTools</b> panel by pressing <b>F12</b><li>Select the <b>Network</b> tab<li>Click on the <b>Doc</b> button<li>Refresh the page by pressing <b>F5</b><li>Select the <b>Headers</b> tab<li>Find 'cookie:' in the <b>Request Headers</b> section<li>Copy & paste the whole cookie string to here</ol>"
+    label: Username
+  - name: password
+    type: password
+    label: Password
   - name: freeleech
     type: checkbox
     label: Search freeleech only
@@ -119,15 +118,21 @@ settings:
       asc: asc
 
 login:
-  method: cookie
+  path: lt/account-login.php
+  method: post
   inputs:
-    cookie: "{{ .Config.cookie }}"
+    username: "{{ .Config.username }}"
+    password: "{{ .Config.password }}"
+  error:
+    - selector: div.klaida
+    - selector: p.error_text
   test:
-    path: lt/torrents.php
+    path: lt/main
+    selector: a[href="myaccount"]
 
 search:
   paths:
-    - path: lt/torrents.php
+    - path: lt/torrents
   inputs:
     $raw: "{{ range .Categories }}cats[]={{.}}&{{end}}"
     search: "{{ .Keywords }}"
@@ -154,29 +159,36 @@ search:
       filters:
         - name: querystring
           args: cats
-    title:
-      selector: div[class^="torrent-name"] a
-    details:
-      selector: div[class^="torrent-name"] a
-      attribute: href
     download:
       selector: td a[href^="download?id="]
+      attribute: href
+      # DL will be missing for banned titles but the row after1 means we cant trap it with a has(a[href^="download.php/"])
+      optional: true
+    title:
+      selector: div[class^="torrent-name"] a
+      filters:
+        - name: prepend
+          args: "{{ if .Result.download }}{{ else }}*uždraustas* {{ end }}"
+    details:
+      selector: div[class^="torrent-name"] a
       attribute: href
     poster:
       selector: div[class^="torrent-name"] a
       attribute: data-poster-preview
-    seeders_optional:
+    seeders:
       selector: td.seeders_cell:not(:has(i))
       optional: true
-    seeders:
-      text: "{{ if .Result.seeders_optional }}{{ .Result.seeders_optional }}{{ else }}0{{ end }}"
-    leechers_optional:
+      default: 0
+    leechers:
       selector: td.leechers_cell:not(:has(i))
       optional: true
-    leechers:
-      text: "{{ if .Result.leechers_optional }}{{ .Result.leechers_optional }}{{ else }}0{{ end }}"
+      default: 0
     size:
       selector: td.size_cell
+    description:
+      case:
+        img[src$="/checked.png"]: Verified
+        "*": Unverified
     downloadvolumefactor:
       case:
         img[src$="/freedownload.gif"]: 0
@@ -190,7 +202,7 @@ search:
         - name: append
           args: " +02:00" # EET
         - name: dateparse
-          args: "2006-01-02 15:04 -07:00"
+          args: "yyyy-MM-dd HH:mm zzz"
     minimumratio:
       text: 0.41
 # engine n/a

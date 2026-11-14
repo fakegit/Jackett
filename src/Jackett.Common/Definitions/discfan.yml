@@ -84,7 +84,7 @@ login:
         selector: td.text
   test:
     path: index.php
-    selector: a[href^="userdetails.php?id="]
+    selector: a[href*="userdetails.php?id="]
 
 search:
   paths:
@@ -102,31 +102,34 @@ search:
     search_mode: 0
     sort: "{{ .Config.sort }}"
     type: "{{ .Config.type }}"
+    notnewword: 1
 
   rows:
     selector: table.torrents > tbody > tr:has(table.torrentname)
 
   fields:
     category:
-      selector: a[href^="?cat="]
+      selector: a[href*="?cat="]
       attribute: href
       filters:
         - name: querystring
           args: cat
     title_default:
-      selector: a[href^="details.php?id="]
-    title_optional:
-      optional: true
-      selector: a[title][href^="details.php?id="]
-      attribute: title
+      selector: a[href*="details.php?id="]
     title:
-      text: "{{ if .Result.title_optional }}{{ .Result.title_optional }}{{ else }}{{ .Result.title_default }}{{ end }}"
+      selector: a[title][href*="details.php?id="]
+      attribute: title
+      optional: true
+      default: "{{ .Result.title_default }}"
     details:
-      selector: a[href^="details.php?id="]
+      selector: a[href*="details.php?id="]
       attribute: href
     download:
-      selector: a[href^="download.php?id="]
+      selector: a[href*="download.php?id="]
       attribute: href
+    poster:
+      selector: img[data-src]
+      attribute: data-src
     imdbid:
       selector: a[href*="imdb.com/title/tt"]
       attribute: href
@@ -139,7 +142,7 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     date_added:
       # time added
       selector: td:nth-child(4):not(:has(span))
@@ -148,17 +151,25 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss zzz"
     date:
       text: "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
     size:
       selector: td:nth-child(5)
+      optional: true
+      default: 512MB
     seeders:
       selector: td:nth-child(6)
+      optional: true
+      default: 0
     leechers:
       selector: td:nth-child(7)
+      optional: true
+      default: 0
     grabs:
       selector: td:nth-child(8)
+      optional: true
+      default: 0
     downloadvolumefactor:
       case:
         img.pro_free: 0
@@ -173,7 +184,7 @@ search:
         img.pro_free2up: 2
         img.pro_2up: 2
         "*": 1
-    cat:
+    category_title:
       selector: a[href^="?cat="] > img
       attribute: title
     description:
@@ -181,7 +192,7 @@ search:
       remove: a, img
       filters:
         - name: prepend
-          args: "cat={{ .Result.cat }} - "
+          args: "cat={{ .Result.category_title }} - "
     minimumratio:
       text: 0.9
-# NexusPHP Standard v1.5 Beta 4
+# NexusPHP v1.10.3 2026-06-28

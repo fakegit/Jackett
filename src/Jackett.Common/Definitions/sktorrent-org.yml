@@ -1,6 +1,6 @@
 ---
 id: sktorrent-org
-name: SkTorrent-org
+name: SkTorrent.org
 description: "SkTorrent.org is a Semi-Private torrent site for MOVIES / TV/ GENERAL"
 language: en-US
 type: semi-private
@@ -30,6 +30,7 @@ caps:
     - {id: 4, cat: Movies/Other, desc: "Movies - Other"}
     - {id: 49, cat: Movies/3D, desc: "Movies - 3D"}
     - {id: 48, cat: Movies/BluRay, desc: "Movies - Blu-ray"}
+    - {id: 70, cat: Movies/UHD, desc: "Movies - 4K"}
     - {id: 22, cat: Audio/MP3, desc: "Music - MP3"}
     - {id: 24, cat: Audio/Video, desc: "Music - DVD"}
     - {id: 27, cat: Audio/Other, desc: "Music - Other"}
@@ -115,14 +116,18 @@ search:
     order: "{{ .Config.type }}"
   keywordsfilters:
     - name: re_replace
-      args: ["(\\w+)", " +$1"] # prepend + to each word
+      args: ["(\\w+)", "+$1"] # prepend + to each word
 
   rows:
-    selector: tr.t-row
+    selector: tr.t-row:has(a[href^="download.php?id="])
+    filters:
+      - name: andmatch
 
   fields:
     category:
       selector: td a[href^="torrents.php?cat="]
+      optional: true
+      default: 53
       attribute: href
       filters:
         - name: querystring

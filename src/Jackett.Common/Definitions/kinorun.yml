@@ -52,8 +52,6 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q]
-    movie-search: [q]
 
 settings:
   - name: username
@@ -115,25 +113,28 @@ search:
     selector: table.embedded > tbody > tr:has(a[href^="details.php?id="])
 
   fields:
-    category:
+    category_optional:
       selector: a[href^="browse.php?cat="]
       attribute: href
+      optional: true
       filters:
         - name: querystring
           args: cat
+    category:
+      text: "{{ if .Result.category_optional }}{{ .Result.category_optional }}{{ else }}24{{ end }}"
     title:
       selector: a[href^="./torrent-"]
     details:
       selector: a[href^="details.php?id="]
       attribute: href
-    id:
+    _id:
       selector: a[href^="details.php?id="]
       attribute: href
       filters:
         - name: querystring
           args: id
     download:
-      text: "download.php?id={{ .Result.id }}"
+      text: "download.php?id={{ .Result._id }}"
     description:
       selector: a[href^="browse.php?cat="] img
       attribute: alt
@@ -142,14 +143,14 @@ search:
       attribute: onmouseover
       filters:
         - name: regexp
-          args: "src=(.+?) width"
+          args: src=([^\s]+)
     date:
       selector: td:nth-child(2) i
       filters:
         - name: append
           args: " +03:00" # MSK
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     files:
       selector: td:nth-child(3)
     size:

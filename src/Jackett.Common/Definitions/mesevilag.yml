@@ -1,7 +1,7 @@
 ---
 id: mesevilag
 name: MeseVilág
-description: "MeseVilág (Fairytale World) is a Hungarian Private site for fairy tales, family movies and comedies"
+description: "MeseVilág (Fairytale World) is a HUNGARIAN Private Torrent Tracker for ANIMATED MOVIES / TV"
 language: hu-HU
 type: private
 encoding: UTF-8
@@ -142,13 +142,17 @@ search:
         - name: append
           args: " +01:00" # CET
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     seeders:
       selector: td:nth-last-child(4)
     leechers:
       selector: td:nth-last-child(3)
     grabs:
       selector: td:nth-last-child(2)
+    description:
+      case:
+        img[src="pic/yes.png"]: Verified
+        img[src="pic/nincs.png"]: Unverified
     downloadvolumefactor:
       selector: td:nth-last-child(5) > font
       case:
@@ -165,8 +169,8 @@ search:
       selector: td:nth-last-child(5)
       remove: font
     minimumratio:
-      text: 0.7
+      text: 1.0
     minimumseedtime:
-      # 5 days (as seconds = 5 x 24 x 60 x 60)
-      text: 432000
+      # 2 days (as seconds = 2 x 24 x 60 x 60)
+      text: 172800
 # engine n/a

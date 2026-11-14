@@ -23,25 +23,20 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q, season, ep, imdbid]
-    movie-search: [q, imdbid]
+    tv-search: [q, season, ep, imdbid, doubanid]
+    movie-search: [q, imdbid, doubanid]
     music-search: [q]
 
 settings:
-  - name: username
+  - name: cookie
     type: text
-    label: Username
-  - name: password
-    type: password
-    label: Password
+    label: Cookie
+  - name: info_cookie
+    type: info_cookie
   - name: freeleech
     type: checkbox
     label: Search freeleech only
     default: false
-  - name: info_tpp
-    type: info
-    label: Results Per Page
-    default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
   - name: sort
     type: select
     label: Sort requested from site
@@ -58,26 +53,24 @@ settings:
     options:
       desc: desc
       asc: asc
+  - name: info_tpp
+    type: info
+    label: Results Per Page
+    default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_ipv6
+    type: info
+    label: IPv6 only
+    default: This site only accepts IPv6 addresses. If you are using IPv4 you will get a DNS Lookup Error.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "Account retention rules:<ol><li>Newly registered users who have not generated any traffic within 14 days (that is, the upload/download data are both 0) will be deleted</li><li>Users with a user level of Peasant that have failed to successfully improve their sharing rate within 14 days will be deleted.</li></ol>"
 
 login:
-  path: login.php
-  method: form
-  form: form[action="takelogin.php"]
-  captcha:
-    type: image
-    selector: img[alt="CAPTCHA"]
-    input: imagestring
+  # using cookie method because login page is dynamically generated with JS
+  method: cookie
   inputs:
-    username: "{{ .Config.username }}"
-    password: "{{ .Config.password }}"
-    logout: ""
-    securelogin: ""
-    ssl: yes
-    trackerssl: yes
-  error:
-    - selector: td.embedded:has(h2:contains("失败"))
-    - selector: td.embedded:has(h2:contains("failed!"))
-    - selector: td.embedded:has(h2:contains("Failed"))
+    cookie: "{{ .Config.cookie }}"
   test:
     path: index.php
     selector: a[href^="logout.php?key="]
@@ -87,44 +80,45 @@ search:
     - path: torrents.php
   inputs:
     $raw: "{{ range .Categories }}cat{{.}}=1&{{end}}"
-    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}"
+    search: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}{{ .Query.DoubanID }}{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}{{ .Keywords }}{{ else }}{{ end }}"
     # 0 incldead, 1 active, 2 dead
     incldead: 0
     # 0 all, 1 normal, 2 free, 3 2x, 4 2xfree, 5 50%, 6 2x50%, 7 30%
     spstate: "{{ if .Config.freeleech }}2{{ else }}0{{ end }}"
     # 0 title, 1 descr, 3 uploader, 4 imdburl
-    search_area: "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}"
+    search_area: "{{ if .Query.IMDBID }}4{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}1{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}0{{ else }}{{ end }}"
     # 0 AND, 1 OR, 2 exact, 3 NOT
     search_mode: 0
     sort: "{{ .Config.sort }}"
     type: "{{ .Config.type }}"
-
+    notnewword: 1
 
   rows:
     selector: table.torrents > tbody > tr:has(table.torrentname)
 
-
   fields:
     category:
-      selector: a[href^="?cat="]
+      selector: a[href^="torrents.php?cat="]
       attribute: href
       filters:
         - name: querystring
           args: cat
     title_default:
       selector: a[href^="details.php?id="]
-    title_optional:
-      optional: true
+    title:
       selector: a[title][href^="details.php?id="]
       attribute: title
-    title:
-      text: "{{ if .Result.title_optional }}{{ .Result.title_optional }}{{ else }}{{ .Result.title_default }}{{ end }}"
+      optional: true
+      default: "{{ .Result.title_default }}"
     details:
       selector: a[href^="details.php?id="]
       attribute: href
     download:
-      selector: a[href^="download.php?id="]
+      selector: a[href^="details.php?id="]
       attribute: href
+      filters:
+        - name: replace
+          args: ["details", "download"]
     imdbid:
       selector: a[href*="imdb.com/title/tt"]
       attribute: href
@@ -137,7 +131,7 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     date_added:
       # time added
       selector: td.rowfollow:nth-last-of-type(6):not(:has(span))
@@ -146,7 +140,7 @@ search:
         - name: append
           args: " +08:00" # CST
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss zzz"
     date:
       text: "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
     size:
@@ -171,12 +165,12 @@ search:
         img.pro_free2up: 2
         img.pro_2up: 2
         "*": 1
-    description:
-      selector: td:nth-child(2)
-      remove: a, img
     minimumratio:
       text: 1.0
     minimumseedtime:
       # 1 day (as seconds = 1 x 24 x 60 x 60)
       text: 86400
+    description:
+      selector: td:nth-child(2)
+      remove: a, b, font, img, span
 # NexusPHP v1.5 beta 5 20120707

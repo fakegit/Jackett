@@ -1,7 +1,7 @@
 ---
 id: wihd
 name: World-In-HD
-description: "Your world in HD"
+description: "World-In-HD is a Private Torrent Tracker. Your world in HD"
 language: fr-FR
 type: private
 encoding: UTF-8
@@ -39,6 +39,10 @@ caps:
     - {id: 59e67c0ed5b6a3e689dd1e1f, cat: Movies/UHD, desc: "Bluray 4K"}
     - {id: 59e488174a23a800358b4567, cat: Movies/UHD, desc: "Bluray Remux 4K"}
     - {id: 5a64af02ee30983a7e596aed, cat: Movies/HD, desc: "WEB-DL"}
+    - {id: 5cd19d6c3fc7af3ea2491037, cat: Movies/UHD, desc: "2160p"}
+    - {id: 5cd1a01f3fc7af3ea2491038, cat: TV/Anime, desc: "2160p"}
+    - {id: 5cd1a0b73fc7af3ea2491039, cat: Movies/Other, desc: "2160p"}
+    - {id: 5cd19f753fc7af3ea249103a, cat: TV/UHD, desc: "2160p"}
 
   modes:
     search: [q]
@@ -58,22 +62,22 @@ settings:
     default: false
   - name: multilang
     type: checkbox
-    label: Replace MULTI by another language in release name
+    label: Replace MULTi by another language in release name
     default: false
   - name: multilanguage
     type: select
-    label: Replace MULTI by this language
+    label: Replace MULTi by this language
     default: FRENCH
     options:
       FRENCH: FRENCH
-      MULTI.FRENCH: MULTI.FRENCH
+      MULTi FRENCH: MULTi FRENCH
       ENGLISH: ENGLISH
-      MULTI.ENGLISH: MULTI.ENGLISH
+      MULTi ENGLISH: MULTi ENGLISH
       VOSTFR: VOSTFR
-      MULTI.VOSTFR: MULTI.VOSTFR
+      MULTi VOSTFR: MULTi VOSTFR
   - name: vostfr
     type: checkbox
-    label: Replace VOSTFR with ENGLISH
+    label: Replace VOSTFR and SUBFRENCH with ENGLISH
     default: false
 
 login:
@@ -88,13 +92,11 @@ login:
     - selector: :contains("\"success\":false")
   test:
     path: torrents
+    selector: a[href*="logout"]
 
 search:
   paths:
-    - path: torrent/ajaxfiltertorrent/{{ .Keywords }}
-  keywordsfilters:
-    - name: re_replace
-      args: ["^$", "null"]
+    - path: "torrent/ajaxfiltertorrent/{{ if .Keywords }}{{ .Keywords }}{{ else }}null{{ end }}"
   inputs:
     $raw: "{{ range .Categories }}subcat[]={{.}}&{{end}}"
     exclu: 0
@@ -115,22 +117,20 @@ search:
           args: ["(?i)(SEASON|SAISON) (\\d\\d)", "S$2"]
         - name: re_replace
           args: ["(?i)(SEASON|SAISON) (\\d)", "S0$2"]
-    title_multilang:
+    title_vostfr:
       text: "{{ .Result.title_phase1 }}"
       filters:
         - name: re_replace
-          args: ["(?i)(\\smulti\\s)", " {{ .Config.multilanguage }} "]
+          args: ["(?i)\\b(vostfr|subfrench)\\b", "ENGLISH"]
     title_phase2:
-      text: "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase1 }}{{ end }}"
-    title_vostfr:
+      text: "{{ if .Config.vostfr }}{{ .Result.title_vostfr }}{{ else }}{{ .Result.title_phase1 }}{{ end }}"
+    title_multilang:
       text: "{{ .Result.title_phase2 }}"
       filters:
         - name: re_replace
-          args: ["(?i)(\\svostfr\\s)", " ENGLISH "]
-        - name: re_replace
-          args: ["(?i)(\\ssubfrench\\s)", " ENGLISH "]
+          args: ["(?i)\\b(MULTI(?!.*(?:FRENCH|ENGLISH|VOSTFR)))\\b", "{{ .Config.multilanguage }}"]
     title:
-      text: "{{ if .Config.vostfr }}{{ .Result.title_vostfr }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
+      text: "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
     poster:
       selector: a.torrentlink > img.img-responsive
       attribute: src
@@ -168,6 +168,10 @@ search:
         ":contains(\"Divers\"):contains(\"Bluray\")": "565af82d1fd35761568b45b7"
         ":contains(\"Divers\"):contains(\"1080p\")": "59591f0807fd301b6eaa7a8f"
         ":contains(\"Divers\"):contains(\"720p\")": "595cd82e07fd301b6eaa7a90"
+        ":contains(\"Films\"):contains(\"2160p\")": "5cd19d6c3fc7af3ea2491037"
+        ":contains(\"Animations\"):contains(\"2160p\")": "5cd1a01f3fc7af3ea2491038"
+        ":contains(\"Divers\"):contains(\"2160p\")": "5cd1a0b73fc7af3ea2491039"
+        ":contains(\"Séries\"):contains(\"2160p\")": "5cd19f753fc7af3ea249103a"
         "*": ""
     size: # actuall size is not provided, use some default values to make clients happy
       selector: div.category
@@ -200,7 +204,13 @@ search:
         ":contains(\"Divers\"):contains(\"Bluray\")": "20GB"
         ":contains(\"Divers\"):contains(\"1080p\")": "5GB"
         ":contains(\"Divers\"):contains(\"720p\")": "4GB"
+        ":contains(\"Films\"):contains(\"2160p\")": "20GB"
+        ":contains(\"Animations\"):contains(\"2160p\")": "20GB"
+        ":contains(\"Divers\"):contains(\"2160p\")": "20GB"
+        ":contains(\"Séries\"):contains(\"2160p\")": "20GB"
         "*": ""
+    date:
+      text: now
     download:
       selector: div.download-item > a
       attribute: href

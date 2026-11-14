@@ -2,35 +2,29 @@
 id: yts
 name: YTS
 description: "YTS is a Public torrent site specialising in HD movies of small size"
-language: en-US
 type: public
+language: en-US
 encoding: UTF-8
 requestDelay: 2.5 # 2.5 requests per second (2 causes problems)
 links:
-  # dont forget to update the details, download and poster replace args
-  - https://yts.mx/
-  - https://yts.unblockit.tv/
-  - https://yts.unblockninja.com/
-  - https://yts.nocensor.biz/
+  # if the primary domain changes then don't forget to update the details, download and poster replace args
+  - https://yts.gg/
+  # official domain list are at https://yifystatus.com/ and official proxies list are at https://ytsproxies.com/
+  - https://yts.ninjaproxy1.com/
+  - https://yts.proxyninja.org/
+  - https://yts.torrentbay.st/
+  - https://yts.torrentsbay.org/
 legacylinks:
-  - https://yts.ag/
-  - https://yts.am/
-  - https://yts.lt/
-  - https://yts.unblockit.dev/
-  - https://yts.root.yt/
-  - https://yts.unblockit.ltd/
-  - https://yts.unblockit.buzz/
-  - https://yts.unblockit.club/
-  - https://yts.unblockit.link/
-  - https://yts.unblockit.onl/
-  - https://yts.unblockit.uno/
-  - https://yts.unblockit.ch/
-  - https://yts.unblockit.li/
-  - https://yts.unblockit.ws/
-  - https://yts.nocensor.space/
-  - https://yts.nocensor.work/
-  - https://yts.unblockit.kim/
-  - https://yts.unblockit.bz/
+  - https://yts.bz/ # redirects to .gg
+  - https://yts.am/ # redirects to .gg
+  - https://yts.ag/ # redirects to .gg
+  - https://yts.lt/ # redirects to .gg
+  - https://yts.mx/
+  - https://yts.mrunblock.bond/
+  - https://yts.nocensor.cloud/
+  - https://yts.unblockit.download/
+  - https://yts.unblockninja.com/
+  - https://yts.proxyninja.net/
 
 caps:
   categorymappings:
@@ -45,29 +39,40 @@ caps:
     search: [q]
     movie-search: [q, imdbid]
 
-settings: []
+settings:
+  - name: apiurl
+    label: API URL
+    type: text
+    default: movies-api.accel.li
 
 search:
   paths:
-    - path: api/v2/list_movies.json
+    - path: "https://{{ .Config.apiurl }}/api/v2/list_movies.json"
       response:
         type: json
-        attribute: torrents
-        multiple: true
+
   inputs:
-    # ignore ' (e.g. search for america's Next Top Model)
-    query_term: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ re_replace .Keywords \"[']\" \"\" }}{{ end }}"
+    query_term: "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}"
     # without this the API sometimes returns nothing
     limit: 50
-    sort: date_added
+    sort_by: date_added
+    order_by: desc
+  keywordsfilters:
+    # ignore ' (e.g. search for america's Next Top Model)
+    - name: re_replace
+      args: ["[^\\w]+", " "]
 
   rows:
     selector: data.movies
+    attribute: torrents
+    multiple: true
+    # bug at YTS can return movie_count > 0 and no movie torrents #12598
+    missingAttributeEqualsNoResults: true
     count:
       selector: data.movie_count
 
   fields:
-    quality:
+    _quality:
       selector: quality
     category:
       selector: quality
@@ -77,44 +82,47 @@ search:
         "2160p": 46
         "3D": 47
         "*": 45
-    type:
+    _audio:
+      selector: audio_channels
+    _depth:
+      selector: bit_depth
+    _type:
       selector: type
+    _codec:
+      selector: video_codec
     year:
       selector: ..year
-    title:
+    title_default:
       selector: ..title
+      filters:
+        - name: append
+          args: " ({{ .Result.year }})"
+    title:
+      selector: ..title_long
+      optional: true
+      default: "{{ .Result.title_default }}"
       filters:
         - name: replace
           args: [":", ""]
-        - name: replace
-          args: [" ", "."]
-        # append type: BRRip or WEBRip, resolves #3558 via #4577
         - name: append
-          args: ".{{ .Result.year }}.{{ .Result.quality }}.{{ if eq .Result.type \"web\" }}WEBRip{{ else }}BRRip{{ end }}-YTS"
-    sitelink_trimmed:
-      text: "{{ .Config.sitelink }}"
-      filters:
-        - name: replace
-          args: ["https://", ""]
-        - name: replace
-          args: ["/", ""]
+          args: " {{ .Result._quality }} {{ if eq .Result._type \"web\" }}WEBRip{{ else }}BRRip{{ end }} {{ if eq .Result._audio \"5.1\" }}5.1 {{ else }}{{ end }}{{ if eq .Result._depth \"10\" }}10Bit {{ else }}{{ end }}{{ .Result._codec }} -YTS"
     details:
       selector: ..url
       filters:
-        - name: replace
-          args: ["yts.mx", "{{ .Result.sitelink_trimmed }}"] # fix for 12494
+        - name: re_replace
+          args: ["^https?:\\/\\/yts\\.(mx|lt|bz|gg)\\/", "{{ .Config.sitelink }}"] # fix for 12494
     download:
       selector: url
       filters:
-        - name: replace
-          args: ["yts.mx", "{{ .Result.sitelink_trimmed }}"] # fix for 12494
+        - name: re_replace
+          args: ["^https?:\\/\\/yts\\.(mx|lt|bz|gg)\\/", "{{ .Config.sitelink }}"] # fix for 12494
     infohash:
       selector: hash
     poster:
       selector: ..large_cover_image
       filters:
-        - name: replace
-          args: ["yts.mx", "{{ .Result.sitelink_trimmed }}"] # fix for 12494
+        - name: re_replace
+          args: ["^https?:\\/\\/yts\\.(mx|lt|bz|gg)\\/", "{{ .Config.sitelink }}"] # fix for 12494
     imdbid:
       selector: ..imdb_code
     date:

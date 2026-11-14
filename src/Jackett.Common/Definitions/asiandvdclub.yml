@@ -1,7 +1,7 @@
 ---
 id: asiandvdclub
 name: AsianDVDClub
-description: "AsianDVDClub (ADC) is a Private Torrent Tracker for Asian DVD and BluRay"
+description: "AsianDVDClub (ADC) is a Private Torrent Tracker for ASIAN DVD and BluRay"
 language: en-US
 type: private
 encoding: UTF-8
@@ -22,39 +22,57 @@ caps:
     - {id: 10, cat: Movies, desc: "Malaysia"}
     - {id: 11, cat: Movies, desc: "Other Asian"}
     - {id: 12, cat: Other, desc: "Miscellaneous"}
+    - {id: 15, cat: TV, desc: "TV Series"}
+    - {id: 16, cat: Audio, desc: "Music/OST"}
 
   modes:
     search: [q]
     tv-search: [q, season, ep]
     movie-search: [q]
+    music-search: [q]
 
 settings:
-  - name: username
+  - name: cookie
     type: text
-    label: Username
-  - name: password
-    type: password
-    label: Password
+    label: Cookie
+  - name: info_cookie
+    type: info_cookie
   - name: freeleech
     type: checkbox
     label: Search freeleech only
     default: false
+  - name: sort
+    type: select
+    label: Sort requested from site
+    default: added
+    options:
+      added: created
+      up: seeders
+      size: size
+      title: title
+  - name: type
+    type: select
+    label: Order requested from site
+    default: desc
+    options:
+      desc: desc
+      asc: asc
   - name: info_tpp
     type: info
     label: Results Per Page
     default: For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile.
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "No special action required for red ribbons and permanent sponsors and above regardless of time, for others after 1 year of zero activity on tracker and/or website account will be closed."
 
 login:
-  path: login
-  method: post
+  # using cookie method because site's login page currently is prefixed bay a mission statement page which does not clear until after 2 minutes!
+  method: cookie
   inputs:
-    apple: evil
-    username: "{{ .Config.username }}"
-    password: "{{ .Config.password }}"
-  error:
-    - selector: p:contains("Error")
+    cookie: "{{ .Config.cookie }}"
   test:
-    path: index
+    path: /
     selector: a[href="/logout"]
 
 search:
@@ -65,14 +83,17 @@ search:
     searchbox: "{{ .Keywords }}"
     search: Search
     golden: "{{ if .Config.freeleech }}1{{ else }}{{ end }}"
+    column: "{{ .Config.sort }}"
+    order: "{{ .Config.type }}"
 
   rows:
     selector: table.torrenttable_helper > tbody > tr:has(img)
 
   fields:
-    category:
+    category_optional:
       selector: img[class^="cat-"]
       attribute: class
+      optional: true
       case:
         img.cat-anime: 1
         img.cat-hk: 2
@@ -85,9 +106,15 @@ search:
         img.cat-viet: 9
         img.cat-malaysia: 10
         img.cat-rest: 11
-        img.cat-misc: 12 # unconfirmed as there are currently no torrents for cat[12]
+        img.cat-india: 11
+        img.cat-misc: 12
+        img.cat-pinku: 12
+        img.cat-drama: 15
+        img.cat-ost: 16
+    category:
+      text: "{{ if .Result.category_optional }}{{ .Result.category_optional }}{{ else }}12{{ end }}"
     title:
-      selector: a[href^="/torrent/"]
+      selector: span[id]
     details:
       selector: a[href^="/torrent/"]
       attribute: href
@@ -97,23 +124,28 @@ search:
       filters:
         - name: replace
           args: ["torrent", "download"]
+    poster:
+      selector: span[id]
+      attribute: data-ot
+      filters:
+        - name: regexp
+          args: src='(.+?)'
     size:
-      selector: td:nth-last-child(6)
+      selector: td:nth-child(6)
     seeders:
-      selector: td:nth-last-child(5)
+      selector: td:nth-child(7)
     leechers:
-      selector: td:nth-last-child(4)
+      selector: td:nth-child(8)
     date:
-      selector: td:nth-last-child(3)
-      remove: p
+      selector: td:nth-child(9) span.small
       filters:
         - name: timeago
     grabs:
-      selector: td:nth-last-child(2)
+      selector: td:nth-child(10)
     downloadvolumefactor:
       case:
-        img[src="../images/golden.gif"]: 0
-        img[src="../images/silver.gif"]: 0.5 # unconfirmed as there are currently no silver torrents
+        img[src$="images/golden.gif"]: 0
+        img[src$="images/silver.gif"]: 0.5
         "*": 1
     uploadvolumefactor:
       text: 1

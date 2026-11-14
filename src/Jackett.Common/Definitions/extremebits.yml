@@ -5,6 +5,8 @@ description: "ExtremeBits is a Private Torrent Tracker for EXTREME SPORTS"
 language: en-US
 type: private
 encoding: UTF-8
+certificates:
+  - f31a18c5e097512324e47b20f67ab4607553ae3c # Expired 24th Feb 2026
 links:
   - https://extremebits.net/
 
@@ -41,7 +43,7 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q]
+    tv-search: [q, season, ep]
     movie-search: [q]
     music-search: [q]
 
@@ -72,6 +74,10 @@ settings:
     options:
       desc: desc
       asc: asc
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "If you don't log in, you will be deleted for inactivity after a few months."
 
 login:
   path: login.php
@@ -104,7 +110,7 @@ search:
     # does not support imdbid searching or have imdb links in results.
 
   rows:
-    selector: table.crowdedtablecenter > tbody >  tr:has(a[href^="details.php?id="])
+    selector: table.crowdedtablecenter > tbody > tr:has(a[href^="details.php?id="])
 
   fields:
     category:
@@ -135,14 +141,14 @@ search:
     size:
       selector: td:nth-of-type(10)
       remove: a
-    cat:
+    category_title:
       selector: td:nth-of-type(1) a img
       attribute: alt
     description:
       selector: td:nth-of-type(4)
       filters:
         - name: prepend
-          args: "cat={{ .Result.cat }}, wait="
+          args: "cat={{ .Result.category_title }}, wait="
     downloadvolumefactor:
       case:
         img[src="img/freedownload.png"]: 0
@@ -156,7 +162,7 @@ search:
         - name: append
           args: " +00:00" # GMT
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     minimumratio:
       text: 0.6
 # TBDEV

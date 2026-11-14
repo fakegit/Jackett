@@ -2,7 +2,7 @@
 
 So, you've decided you want to help make Jackett a better program for everyone. Not everyone chooses to help, so we thank you for your decision.
 In order to help us make the most of your contribution please take the time to read these contributing guidelines.
-These are just guidelines, not hard rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+These are just guidelines, not hard rules. Use your best judgement, and feel free to propose changes to this document in a pull request.
 
 ## Ways you can help
 
@@ -33,19 +33,13 @@ Before you submit a bug-report or do any other troubleshooting, make sure your J
 We are releasing bug fixes almost daily, so your issue may have been fixed already.
 Bugs that are submitted without being on the latest version may be closed.
 
-**Error "An error occurred while sending the request: Error: TrustFailure (A call to SSPI failed, see inner exception.)"**
-
-  This is often caused by missing CA certificates.
-  Try reimporting the certificates in this case:
-   - On Linux (as user root): `wget -O - https://curl.haxx.se/ca/cacert.pem | cert-sync /dev/stdin`
-   - On macOS: `curl -sS https://curl.haxx.se/ca/cacert.pem | cert-sync --user /dev/stdin`
-
 **Tracker isn't working**
 
 If you are experiencing an issue with a tracker, then:
-- Use your browser to check you can access the site directly, and if a login is required,
-    check you can login and that you do not have any outstanding account issues.
+- Use your browser to check if you can access the site directly, and if a login is required,
+    check that you can login and that you do not have any outstanding account issues.
 - If you haven't already, try upgrading to the latest version of Jackett.
+- Check our [Troubleshooting wiki](https://github.com/Jackett/Jackett/wiki/Troubleshooting) for common issues.
 - If it is still not working for you, then a **full enhanced log must be included**.
 
 **Enable enhanced logging**
@@ -68,17 +62,17 @@ Your issue should have the following information.
 - **Descriptive Title** - The title of your bug should include keywords and a descriptive summary of what you're experiencing
     to help others avoid duplicating your bug report
   - Keywords in the title should be as follows:
-    - Tracker bugs should start with the tracker in brackets e.g. [**AnimeBytes**]
-    - Feature requests should start with [**REQ**]
-    - New trackers should begin with [**New**] and the tracker type [**Public**/**Private**/**Semi-Private**] e.g. **[New][Public] ThePirateBay**
+    - Indexer bugs should start with the indexer ID in brackets e.g. **[thepiratebay]**
+    - Feature requests should start with **[req]**
+    - Indexers requests should start with **[req]** and the name of the tracker e.g. **[req] ThePirateBay**
 - **Environment Details** - These are things like your OS version, Jackett type and version, mono/.Net-core/framework version(s).
     These are asked for by the issue template when you create a new issue on GitHub.
 - **Steps** to cause the problem, if applicable. These should be specific and repeatable.
 - **What happens** when you take the steps and **what you expected to happen**
 - **Error messages** and/or screenshots of the issue.
 - The **last working version** if it's applicable. Tracker issues normally don't need this information.
-- An attached copy of your **enhanced logs**. Don't forget to remove usernames/passwords/API-keys from the logs.
-    We'll be working on making sure these are automatically censored in the future.
+- An attached copy of your **enhanced logs**. Don't forget to check and remove usernames/passwords/API-keys etc. from the logs.
+    We've attempted to automatically censor these, but it pays to double check we've not missed anything.
 - Any other **relevant details** you can think of. The more information we have, the quicker we can solve the problem.
 
 ## Adding a New Tracker
@@ -90,7 +84,7 @@ Depending on logic complexity, there are two common ways new trackers are implem
 1. simple [definitions](http://github.com/Jackett/Jackett/tree/master/src/Jackett.Common/Definitions) (.yml / YAML)
 2. advanced (native) [indexers](http://github.com/Jackett/Jackett/tree/master/src/Jackett.Common/Indexers) (.cs / C#)
 
-Read more about the [simple definition format](https://github.com/Jackett/Jackett/wiki/Definition-format).
+Read more about the [simple definition format](https://github.com/Jackett/Jackett/wiki/Definition-format) and [schema](https://github.com/Jackett/Jackett/blob/master/docs/README.md).
 
 # Contributing Code
 
@@ -104,24 +98,31 @@ We've developed the guide below to make sure we're all on the same page because 
 The following guide assumes you've never worked with a Visual Studio project with GitHub before.
 This will give you the minimum necessary tools to get started. There are plenty of optional tools that may help you, but we won't cover those here.
 
-- The guide is currently only geared towards developing on Windows using Visual Studio Community 2019.
+- The guide is currently only geared towards developing on Windows using Visual Studio Community 2022.
 If you use something else, please add it here for others.
 
 <details open=true> <summary> Windows </summary>
 
-<details open=true> <summary> Visual Studio 2019 </summary>
+<details open=true> <summary> Visual Studio 2022 </summary>
 
-- Install [Visual Studio Community 2019](http://visualstudio.com) for free.
-  - About 2GB download. 8GB installed.
-  -  Make sure it includes the following Workloads/Components:
-     -  .Net Desktop Development
-     -  .Net Core Cross-Platform Development
-     -  GitHub extension for Visual Studio
-- [Connect and synchronize your forked repository to Visual Studio](https://doc.fireflymigration.com/working-with-github-fork-in-visual-studio.html)
-- Open  `Tools -> NuGet Package Manager -> Package Manager Console`
-- From the PMC, run `dotnet tool install -g dotnet-format` and `dotnet restore`
-- Run `Build -> Rebuild Solution` to restore NuGet packages
-- Ensure `Jackett.Server` is the Startup Project (instead of `Jackett.Service`), and the Run Target (instead of `IIS Express`)
+- Install [Visual Studio Community 2022](https://visualstudio.microsoft.com/vs/) for free.
+  - About 2GB download, 8GB installed.
+  -  Make sure it includes the following Workload and Individual Components:
+     -  .NET desktop development
+     -  .Net Framework 4.7.1 SDK
+     -  .Net Framework 4.7.1 targeting pack
+- From the `Get Started` screen:
+  - `Clone a repository -> Browse a repository -> GitHub -> Sign in -> clone your forked repository`
+- Double-click `Jackett.sln` in `Solution Explorer` to load your project
+- Ensure `Jackett.Server` is the Startup Project and the Run Target (instead of `Jackett.Service`)
+- Open `Tools -> NuGet Package Manager -> Package Manager Console`
+- From the PMC, with `Jackett.Service` as the default project, run:
+  - `dotnet tool install -g dotnet-format`
+  - `dotnet msbuild /restore`
+  - `dotnet restore`
+  - `dotnet build`
+- [For more information on working with your forked GitHub repository in Visual Studio](https://doc.fireflymigration.com/working-with-github-fork-in-visual-studio.html)
+  - UPDATE: changes are now made in `Git Changes` and `Git Repository` (instead of `Team Explorer`)
 
 </details>
 

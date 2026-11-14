@@ -58,6 +58,7 @@ namespace Jackett.Tray
             toolStripMenuItemAutoStart.Checked = AutoStart;
             toolStripMenuItemAutoStart.CheckedChanged += toolStripMenuItemAutoStart_CheckedChanged;
 
+            notifyIcon1.DoubleClick += toolStripMenuItemWebUI_Click;
             toolStripMenuItemWebUI.Click += toolStripMenuItemWebUI_Click;
             toolStripMenuItemShutdown.Click += toolStripMenuItemShutdown_Click;
 
@@ -118,7 +119,7 @@ namespace Jackett.Tray
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "http://127.0.0.1:" + serverConfig.Port,
+                FileName = "http://" + serverConfig.LocalBindAddress + ":" + serverConfig.Port,
                 UseShellExecute = true
             };
 

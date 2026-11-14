@@ -6,17 +6,23 @@ language: en-US
 type: private
 encoding: UTF-8
 links:
+  - https://pwtorrents.net/
+legacylinks:
   - http://pwtorrents.net/
-links:
-  - https://pwtorrents.net/ # site is forcing to http
 
 caps:
   categorymappings:
+    - {id: 26, cat: TV/Sport, desc: "AEW Dark"}
+    - {id: 21, cat: TV/Sport, desc: "AEW Dynamite"}
+    - {id: 20, cat: TV/Sport, desc: "AEW PPV"}
+    - {id: 23, cat: TV/Sport, desc: "AEW Rampage"}
+    - {id: 28, cat: TV/Sport, desc: "AEW Collision"}
     - {id: 1, cat: TV/Sport, desc: "Boxing"}
     - {id: 2, cat: TV/Sport, desc: "Documentaries"}
     - {id: 3, cat: TV/Sport, desc: "DVD"}
     - {id: 4, cat: TV/Sport, desc: "ECW"}
-    - {id: 5, cat: TV/Sport, desc: "Games and Software"}
+    - {id: 13, cat: TV/Sport, desc: "Impact PPV"}
+    - {id: 14, cat: TV/Sport, desc: "Impact Weekly"}
     - {id: 6, cat: TV/Sport, desc: "Indy's"}
     - {id: 7, cat: TV/Sport, desc: "Matches"}
     - {id: 8, cat: TV/Sport, desc: "Misc."}
@@ -24,20 +30,23 @@ caps:
     - {id: 11, cat: TV/Sport, desc: "Puro"}
     - {id: 10, cat: TV/Sport, desc: "PWT Packs"}
     - {id: 12, cat: TV/Sport, desc: "Ring Of Honor"}
-    - {id: 13, cat: TV/Sport, desc: "TNA PPV's"}
-    - {id: 14, cat: TV/Sport, desc: "TNA Weekly"}
     - {id: 15, cat: TV/Sport, desc: "WCW"}
     - {id: 18, cat: TV/Sport, desc: "WWE Network"}
-    - {id: 16, cat: TV/Sport, desc: "WWE PPV's"}
+    - {id: 16, cat: TV/Sport, desc: "WWE PPV"}
+    - {id: 24, cat: TV/Sport, desc: "WWE RAW"}
+    - {id: 25, cat: TV/Sport, desc: "WWE Smackdown"}
     - {id: 17, cat: TV/Sport, desc: "WWE Weekly"}
-    - {id: 19, cat: TV/Sport, desc: "AEW Weekly"}
-    - {id: 20, cat: TV/Sport, desc: "AEW PPV's"}
+    - {id: 27, cat: TV/Sport, desc: "WWE NXT"}
 
   modes:
     search: [q]
-    tv-search: [q]
+    tv-search: [q, season, ep]
 
 settings:
+  - name: info_2fa
+    type: info
+    label: "About 2FA"
+    default: "If you want to enable 2FA then use the PWTorrents2FA indexer instead."
   - name: username
     type: text
     label: Username
@@ -105,24 +114,26 @@ search:
           args: cat
     title:
       selector: a[href^="details.php?id="]
+      optional: true
+      default: No Title
     details:
       selector: a[href^="details.php?id="]
       attribute: href
-    download1:
+    download_1:
       selector: a[href^="download.php?id="]
       attribute: href
-    download2:
+    download_2:
       selector: a[href^="seeddownload.php?id="]
       attribute: href
     download:
-      text: "{{ if .Config.seedbox }}{{ .Result.download2 }}{{ else }}{{ .Result.download1 }}{{ end }}"
+      text: "{{ if .Config.seedbox }}{{ .Result.download_2 }}{{ else }}{{ .Result.download_1 }}{{ end }}"
     date:
       selector: td:nth-child(4)
       filters:
         - name: append
           args: " +00:00" # GMT
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss zzz"
     size:
       selector: td:nth-child(5)
     grabs:

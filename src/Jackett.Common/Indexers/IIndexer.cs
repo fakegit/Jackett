@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jackett.Common.Models;
 using Jackett.Common.Models.IndexerConfig;
+using Jackett.Common.Utils.Clients;
 using Newtonsoft.Json.Linq;
 
 namespace Jackett.Common.Indexers
@@ -12,28 +13,35 @@ namespace Jackett.Common.Indexers
     {
         public IIndexer Indexer { get; set; }
         public IEnumerable<ReleaseInfo> Releases { get; set; }
+        public long ElapsedTime { get; set; }
         public bool IsFromCache;
 
-        public IndexerResult(IIndexer indexer, IEnumerable<ReleaseInfo> releases, bool isFromCache)
+        public IndexerResult(IIndexer indexer, IEnumerable<ReleaseInfo> releases, long elapsedTime, bool isFromCache)
         {
             Indexer = indexer;
             Releases = releases;
+            ElapsedTime = elapsedTime;
             IsFromCache = isFromCache;
         }
     }
 
     public interface IIndexer
     {
+        string Id { get; }
+        string[] Replaces { get; }
+        string Name { get; }
+        string Description { get; }
+
         string SiteLink { get; }
         string[] AlternativeSiteLinks { get; }
 
-        string DisplayName { get; }
-        string DisplayDescription { get; }
-        string Type { get; }
-        string Language { get; }
-        string LastError { get; set; }
-        string Id { get; }
         Encoding Encoding { get; }
+        string Language { get; }
+        string Type { get; }
+
+        string LastError { get; set; }
+
+        bool SupportsPagination { get; }
 
         TorznabCapabilities TorznabCaps { get; }
 
@@ -65,5 +73,7 @@ namespace Jackett.Common.Indexers
     public interface IWebIndexer : IIndexer
     {
         Task<byte[]> Download(Uri link);
+
+        Task<WebResult> DownloadImage(Uri link);
     }
 }

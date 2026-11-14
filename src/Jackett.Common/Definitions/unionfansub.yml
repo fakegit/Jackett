@@ -1,7 +1,7 @@
 ---
 id: unionfansub
 name: Union Fansub
-description: "Union Fansub is a SPANISH Semi private torrent site focused on ANIME"
+description: "Union Fansub is a SPANISH Semi-Private torrent site focused on ANIME"
 language: es-ES
 type: semi-private
 encoding: UTF-8
@@ -33,7 +33,7 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q]
+    tv-search: [q, season, ep]
     movie-search: [q]
     music-search: [q]
     book-search: [q]
@@ -63,23 +63,24 @@ settings:
       asc: asc
 
 login:
-  path: https://foro.unionfansub.com/member.php
-  method: post
+  path: https://foro.unionfansub.com/member.php?action=login
+  method: form
+  form: form[action="member.php"]
   inputs:
-    quick_username: "{{ .Config.username }}"
-    quick_password: "{{ .Config.password }}"
+    username: "{{ .Config.username }}"
+    password: "{{ .Config.password }}"
     action: do_login
-    url: "https://torrent.unionfansub.com/"
-    quick_login: 1
-    quick_remember: yes
+    url: "{{ .Config.sitelink }}"
+    remember: yes
   error:
-    - selector: div.error
+    - selector: td:contains("usuario/contraseña inválida")
   test:
     path: /
     selector: div#statusbar
 
 search:
-  path: browse.php
+  paths:
+    - path: browse.php
   inputs:
     $raw: "{{ range .Categories }}&c{{.}}=1{{end}}"
     # 0 active, 1 incldead, 2 onlydead
@@ -98,8 +99,22 @@ search:
       filters:
         - name: querystring
           args: cat
-    title:
+    title_fansub:
+      selector: td:nth-child(2) span
+      optional: true
+    title_season:
       selector: td:nth-child(2) a
+      filters:
+        - name: re_replace
+          args: ["(?i)\\b(\\d{1,4})([ºª])\\b", "$1"]
+        - name: re_replace
+          args: ["(?i)\\b(Temporada|Season) (\\d+)\\b", "S$2"]
+        - name: re_replace
+          args: ["(?i)\\b(\\d+)(st|nd|rd|th) (Season|Temporada)\\b", "S$1"]
+        - name: re_replace
+          args: ["(?i)\\b(Season|Temporada) (\\d+)(st|nd|rd|th)\\b", "S$2"]
+    title:
+      text: "{{ .Result.title_season }}{{ if .Result.title_fansub }} [{{ .Result.title_fansub }}]{{ else }}{{ end }}"
     details:
       selector: td:nth-child(2) a
       attribute: href

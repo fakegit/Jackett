@@ -1,7 +1,7 @@
 ---
 id: cinemageddon
 name: Cinemageddon
-description: "B-movie tracker"
+description: "Cinemageddon is a Private Torrent Tracker for B-movies"
 language: en-US
 type: private
 encoding: UTF-8
@@ -37,6 +37,14 @@ caps:
   modes:
     search: [q]
     movie-search: [q, imdbid]
+
+settings:
+  - name: username
+    type: text
+    label: Username
+  - name: password
+    type: password
+    label: Password
 
 login:
   path: takelogin.php
@@ -84,7 +92,7 @@ search:
         - name: append
           args: " -07:00" # PDT
         - name: dateparse
-          args: "2006-01-0215:04:05 -07:00"
+          args: "yyyy-MM-ddHH:mm:ss zzz"
     size:
       selector: td:nth-child(5)
       filters:

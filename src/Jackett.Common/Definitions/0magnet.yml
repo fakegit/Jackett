@@ -2,12 +2,16 @@
 id: 0magnet
 name: 0Magnet
 description: "ØMagnet is a CHINESE Public tracker for Asian 3X (JAV)"
-language: en-US
+language: zh-CN
 type: public
 encoding: UTF-8
 links:
+  - https://16mag.net/
+legacylinks:
   - https://0magnet.com/
   - https://9mag.net/
+  - https://0magnet.co/
+  - https://13mag.net/
 
 caps:
   categories:
@@ -38,10 +42,10 @@ search:
   paths:
     - path: search
   inputs:
-    q: "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}"
+    q: "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}.{{ end }}"
 
   rows:
-    selector: table > tbody > tr:has(td)
+    selector: table > tbody > tr:has(td):not(:contains("We couldn't find anything for"))
     filters:
       - name: andmatch
 
@@ -58,9 +62,12 @@ search:
       selector: a
       attribute: href
     date:
-      text: now
+      selector: div.result-date
+      filters:
+        - name: dateparse
+          args: "yyyy-MM-dd"
     size:
-      selector: td.td-size
+      selector: td.result-meta > div
     seeders:
       text: 1
     leechers:

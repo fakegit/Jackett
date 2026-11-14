@@ -60,8 +60,6 @@ caps:
 
   modes:
     search: [q]
-    tv-search: [q]
-    movie-search: [q]
 
 settings:
   - name: username
@@ -146,10 +144,12 @@ search:
     $raw: "{{ if .Categories }}{{ range .Categories }}&f[]={{.}}{{end}}{{ else }}&f[]=-1{{ end }}"
   keywordsfilters:
     - name: re_replace
-      args: ["(\\w+)", " +$1"] # prepend + to each word
+      args: ["(\\w+)", "+$1"] # prepend + to each word
 
   rows:
-    selector: tr[id^="tor_"]
+    selector: tr[id^="tor_"]:has(span.tor-approved) # only approved tors have .torrent and magnets.
+    filters:
+      - name: andmatch
 
   fields:
     category:

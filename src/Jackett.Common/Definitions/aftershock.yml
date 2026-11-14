@@ -6,9 +6,10 @@ language: hu-HU
 type: private
 encoding: iso-8859-1
 links:
-  - https://aftershock-tracker.net/
+  - https://aftershock.hu/
 legacylinks:
   - https://aftershock-tracker.eu/
+  - https://aftershock-tracker.net/
 
 caps:
   categorymappings:
@@ -58,12 +59,16 @@ caps:
     book-search: [q]
 
 settings:
-  - name: username
+  - name: cookie
     type: text
-    label: Username
-  - name: password
-    type: password
-    label: Password
+    label: Cookie
+  - name: info_cookie
+    type: info_cookie
+  - name: useragent
+    type: text
+    label: User-Agent
+  - name: info_useragent
+    type: info_useragent
   - name: freeleech
     type: checkbox
     label: Search freeleech only
@@ -84,20 +89,19 @@ settings:
     options:
       desc: desc
       asc: asc
+  - name: info_activity
+    type: info
+    label: Account Inactivity
+    default: "You will be immediately banned if you have not logged in for more than 6 weeks."
 
 login:
-  path: takelogin.php
-  method: post
+  # using cookie method because login page has embedded Cloudflare turnstile
+  method: cookie
   inputs:
-    username: "{{ .Config.username }}"
-    password: "{{ .Config.password }}"
-  error:
-    - selector: td.text:contains("Hiba")
-      message:
-        selector: td.text
+    cookie: "{{ .Config.cookie }}"
   test:
     path: /
-    selector: a[href="/logout.php"]
+    selector: a[href*="/logout.php"]
 
 search:
   paths:
@@ -111,11 +115,20 @@ search:
     type: "{{ .Config.type }}"
 
   rows:
-    selector: table tbody#torrent_background tr:has(a.index)
+    selector: table tbody#torrent_background tr:has(a.index):has(span.icon_check_alt)
     filters:
       - name: andmatch
 
+  headers:
+    User-Agent: ["{{ .Config.useragent }}"]
+
   fields:
+    category:
+      selector: a[href*="/browse.php?cat="]
+      attribute: href
+      filters:
+        - name: querystring
+          args: cat
     title:
       selector: a.index
       attribute: href
@@ -123,17 +136,11 @@ search:
         - name: querystring
           args: name
         - name: urldecode
-    category:
-      selector: td a[href^="/browse.php?cat="]
-      attribute: href
-      filters:
-        - name: querystring
-          args: cat
     details:
-      selector: a.index
+      selector: a[href*="/details.php?id="]
       attribute: href
     download:
-      selector: a[href^="download.php?id="]
+      selector: a.index
       attribute: href
       filters:
         - name: urldecode
@@ -142,10 +149,16 @@ search:
       attribute: onmouseover
       filters:
         - name: regexp
-          args: "src=(.*?) width="
+          args: src=([^\s]+)
+        - name: replace
+          args: ["\"", ""]
     imdbid:
       selector: a[href*="imdb.com/title/tt"]
       attribute: href
+    genre:
+      selector: span.box
+    description:
+      text: "{{ .Result.genre }}"
     files:
       selector: td:nth-last-child(6)
     size:
@@ -164,7 +177,7 @@ search:
         - name: append
           args: " +01:00" # CET
         - name: dateparse
-          args: "2006-01-02 15:04:05 -07:00"
+          args: "yyyy-MM-dd HH:mm:ss zzz"
     downloadvolumefactor:
       case:
         span.icon_gift: 0
